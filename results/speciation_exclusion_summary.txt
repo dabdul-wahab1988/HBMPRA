@@ -1,0 +1,14 @@
+Speciation Analysis Summary
+==================================================
+
+Metals with variable speciation fractions: As, Cd, Cu, Pb, Co, Fe, Mn, Ni, Zn, CrVI, CrIII, Hg(0)
+
+Excluded metals (constant fractions): Hg(II), Hg(I)
+
+Exclusion reasons:
+- Very low concentrations (often < DL)
+- Non-detect values replaced with DL/2
+- Limited variation in water chemistry
+- This is expected for trace metals
+
+Recommendation: Focus risk assessment on metals with variable fractions

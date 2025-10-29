@@ -1,0 +1,102 @@
+{
+  "metals": [
+    "As",
+    "Cd",
+    "Co",
+    "Cr",
+    "CrIII",
+    "CrVI",
+    "Cu",
+    "Fe",
+    "Hg",
+    "Hg(0)",
+    "Hg(I)",
+    "Hg(II)",
+    "Mn",
+    "Ni",
+    "Pb",
+    "Zn"
+  ],
+  "organ_sets": {
+    "neuro": [
+      "Hg",
+      "Hg(I)",
+      "Hg(II)",
+      "Mn",
+      "Pb"
+    ],
+    "nephro": [
+      "Cd",
+      "CrVI",
+      "Hg",
+      "Hg(I)",
+      "Hg(II)",
+      "Pb"
+    ],
+    "hepato": [
+      "As",
+      "Cd",
+      "CrVI",
+      "Cu",
+      "Fe"
+    ],
+    "cardiovascular": [
+      "As",
+      "Co",
+      "Pb"
+    ],
+    "endocrine": [
+      "As",
+      "Co"
+    ],
+    "hemato": [
+      "Pb",
+      "Zn"
+    ],
+    "derm": [
+      "As",
+      "Co",
+      "CrVI",
+      "Ni",
+      "Pb"
+    ],
+    "gi": [
+      "CrIII",
+      "CrVI",
+      "Cu",
+      "Fe"
+    ],
+    "systemic": [
+      "As",
+      "Ni",
+      "Zn"
+    ]
+  },
+  "organ_sets_source": "toxref",
+  "organ_routes": {
+    "hepato": "ingestion",
+    "systemic": "ingestion",
+    "endocrine": "ingestion",
+    "cardiovascular": "ingestion",
+    "derm": "dermal",
+    "nephro": "ingestion",
+    "gi": "ingestion",
+    "neuro": "ingestion",
+    "hemato": "ingestion"
+  },
+  "carcinogens": [
+    "As",
+    "CrVI"
+  ],
+  "speciation_source": "phreeqc_bio",
+  "phreeqc_bio_path": "external\\table_bioavailable_concentrations.csv",
+  "phreeqc_frac_path": "external\\table_species_fractions.csv",
+  "bll_thresholds": [
+    3.5,
+    5.0
+  ],
+  "use_bioavailable": true,
+  "seed": 12,
+  "draws": 2000,
+  "tune": 2000
+}

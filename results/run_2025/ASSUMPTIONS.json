@@ -1,0 +1,408 @@
+{
+  "Kp_used": {
+    "As": 0.001,
+    "Cd": 0.001,
+    "CrVI": 0.002,
+    "CrIII": 0.001,
+    "Cr": 0.001,
+    "Ni": 0.0002,
+    "Mn": 0.001,
+    "Cu": 0.001,
+    "Pb": 0.0001,
+    "Hg": 0.001,
+    "Hg(0)": 0.001,
+    "Hg(I)": 0.001,
+    "Hg(II)": 0.001,
+    "Co": 0.0004,
+    "Fe": 0.001,
+    "Zn": 0.0006
+  },
+  "kp_key_map": {
+    "As": "As",
+    "Cd": "Cd",
+    "Co": "Co",
+    "Cr": "Cr",
+    "CrIII": "CrIII",
+    "CrVI": "CrVI",
+    "Cu": "Cu",
+    "Fe": "Fe",
+    "Hg": "Hg",
+    "Hg(0)": "Hg(0)",
+    "Hg(I)": "Hg(I)",
+    "Hg(II)": "Hg(II)",
+    "Mn": "Mn",
+    "Ni": "Ni",
+    "Pb": "Pb",
+    "Zn": "Zn"
+  },
+  "toxref_source": "external\\toxref.yml",
+  "toxref_used": {
+    "As": {
+      "RfD_oral": 0.0003,
+      "SF_oral": 1.5,
+      "ABS_GI": 0.95,
+      "RfD_derm": 0.000123,
+      "SF_derm": 3.66,
+      "target_organs": [
+        {
+          "hepato": "ingestion"
+        },
+        {
+          "systemic": "ingestion"
+        },
+        {
+          "endocrine": "ingestion"
+        },
+        {
+          "cardiovascular": "ingestion"
+        },
+        {
+          "derm": "dermal"
+        }
+      ]
+    },
+    "Cd": {
+      "RfD_oral": 0.0005,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.075,
+      "RfD_derm": 3.75e-05,
+      "target_organs": [
+        {
+          "nephro": "ingestion"
+        }
+      ]
+    },
+    "CrVI": {
+      "RfD_oral": 0.003,
+      "SF_oral": 0.5,
+      "ABS_GI": 0.025,
+      "RfD_derm": 6e-05,
+      "SF_derm": 41.0,
+      "target_organs": [
+        {
+          "nephro": "ingestion"
+        },
+        {
+          "gi": "ingestion"
+        },
+        {
+          "hepato": "ingestion"
+        },
+        {
+          "derm": "dermal"
+        }
+      ]
+    },
+    "CrIII": {
+      "RfD_oral": 1.5,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.015,
+      "RfD_derm": 0.0225,
+      "target_organs": [
+        {
+          "gi": "ingestion"
+        }
+      ]
+    },
+    "Cr": {
+      "RfD_oral": 0.003,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.015,
+      "RfD_derm": 4.5e-05,
+      "target_organs": []
+    },
+    "Ni": {
+      "RfD_oral": 0.02,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.14,
+      "RfD_derm": 0.02,
+      "SF_derm": 0.0,
+      "target_organs": [
+        {
+          "derm": "dermal"
+        },
+        {
+          "systemic": "ingestion"
+        }
+      ]
+    },
+    "Mn": {
+      "RfD_oral": 0.14,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.055,
+      "RfD_derm": 0.0077,
+      "target_organs": [
+        {
+          "neuro": "ingestion"
+        }
+      ]
+    },
+    "Cu": {
+      "RfD_oral": 0.04,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.4,
+      "RfD_derm": 0.016,
+      "target_organs": [
+        {
+          "gi": "ingestion"
+        },
+        {
+          "hepato": "ingestion"
+        }
+      ]
+    },
+    "Pb": {
+      "RfD_oral": 0.0035,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.1,
+      "RfD_derm": 0.000525,
+      "SF_derm": 0.0,
+      "target_organs": [
+        {
+          "neuro": "ingestion"
+        },
+        {
+          "nephro": "ingestion"
+        },
+        {
+          "cardiovascular": "ingestion"
+        },
+        {
+          "hemato": "ingestion"
+        },
+        {
+          "derm": "dermal"
+        }
+      ]
+    },
+    "Hg": {
+      "RfD_oral": 0.0003,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.11,
+      "RfD_derm": 3.3e-05,
+      "target_organs": [
+        {
+          "nephro": "ingestion"
+        },
+        {
+          "neuro": "ingestion"
+        }
+      ]
+    },
+    "Hg(0)": {
+      "RfD_oral": 0.0,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.005,
+      "RfD_derm": 0.0,
+      "target_organs": []
+    },
+    "Hg(I)": {
+      "RfD_oral": 0.0003,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.11,
+      "RfD_derm": 3.3e-05,
+      "target_organs": [
+        {
+          "nephro": "ingestion"
+        },
+        {
+          "neuro": "ingestion"
+        }
+      ]
+    },
+    "Hg(II)": {
+      "RfD_oral": 0.0003,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.11,
+      "RfD_derm": 3.3e-05,
+      "target_organs": [
+        {
+          "nephro": "ingestion"
+        },
+        {
+          "neuro": "ingestion"
+        }
+      ]
+    },
+    "Co": {
+      "RfD_oral": 0.0003,
+      "SF_oral": 0.0,
+      "RfD_derm": 0.0016,
+      "SF_derm": 0.0,
+      "ABS_GI": 0.05,
+      "target_organs": [
+        {
+          "cardiovascular": "ingestion"
+        },
+        {
+          "endocrine": "ingestion"
+        },
+        {
+          "derm": "dermal"
+        }
+      ]
+    },
+    "Fe": {
+      "RfD_oral": 0.7,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.02,
+      "RfD_derm": 0.014,
+      "target_organs": [
+        {
+          "gi": "ingestion"
+        },
+        {
+          "hepato": "ingestion"
+        }
+      ]
+    },
+    "Zn": {
+      "RfD_oral": 0.3,
+      "SF_oral": 0.0,
+      "ABS_GI": 0.25,
+      "RfD_derm": 0.075,
+      "target_organs": [
+        {
+          "systemic": "ingestion"
+        },
+        {
+          "hemato": "ingestion"
+        }
+      ]
+    }
+  },
+  "ABS_used": {
+    "As": 0.95,
+    "Cd": 0.075,
+    "Co": 0.05,
+    "Cr": 0.015,
+    "CrIII": 0.015,
+    "CrVI": 0.025,
+    "Cu": 0.4,
+    "Fe": 0.02,
+    "Hg": 0.11,
+    "Hg(0)": 0.005,
+    "Hg(I)": 0.11,
+    "Hg(II)": 0.11,
+    "Mn": 0.055,
+    "Ni": 0.14,
+    "Pb": 0.1,
+    "Zn": 0.25
+  },
+  "organ_sets_used": {
+    "neuro": [
+      "Hg",
+      "Hg(I)",
+      "Hg(II)",
+      "Mn",
+      "Pb"
+    ],
+    "nephro": [
+      "Cd",
+      "CrVI",
+      "Hg",
+      "Hg(I)",
+      "Hg(II)",
+      "Pb"
+    ],
+    "hepato": [
+      "As",
+      "Cd",
+      "CrVI",
+      "Cu",
+      "Fe"
+    ],
+    "cardiovascular": [
+      "As",
+      "Co",
+      "Pb"
+    ],
+    "endocrine": [
+      "As",
+      "Co"
+    ],
+    "hemato": [
+      "Pb",
+      "Zn"
+    ],
+    "derm": [
+      "As",
+      "Co",
+      "CrVI",
+      "Ni",
+      "Pb"
+    ],
+    "gi": [
+      "CrIII",
+      "CrVI",
+      "Cu",
+      "Fe"
+    ],
+    "systemic": [
+      "As",
+      "Ni",
+      "Zn"
+    ]
+  },
+  "organ_sets_source": "toxref",
+  "organ_routes_used": {
+    "hepato": "ingestion",
+    "systemic": "ingestion",
+    "endocrine": "ingestion",
+    "cardiovascular": "ingestion",
+    "derm": "dermal",
+    "nephro": "ingestion",
+    "gi": "ingestion",
+    "neuro": "ingestion",
+    "hemato": "ingestion"
+  },
+  "RFD_abs": {
+    "As": 0.000123,
+    "Cd": 3.75e-05,
+    "Co": 0.0016,
+    "Cr": 4.5e-05,
+    "CrIII": 0.0225,
+    "CrVI": 6e-05,
+    "Cu": 0.016,
+    "Fe": 0.014,
+    "Hg": 3.3e-05,
+    "Hg(0)": 0.0,
+    "Hg(I)": 3.3e-05,
+    "Hg(II)": 3.3e-05,
+    "Mn": 0.0077,
+    "Ni": 0.02,
+    "Pb": 0.000525,
+    "Zn": 0.075
+  },
+  "SF_abs": {
+    "As": 3.66,
+    "Cd": 0.0,
+    "Co": 0.0,
+    "Cr": 0.0,
+    "CrIII": 0.0,
+    "CrVI": 41.0,
+    "Cu": 0.0,
+    "Fe": 0.0,
+    "Hg": 0.0,
+    "Hg(0)": 0.0,
+    "Hg(I)": 0.0,
+    "Hg(II)": 0.0,
+    "Mn": 0.0,
+    "Ni": 0.0,
+    "Pb": 0.0,
+    "Zn": 0.0
+  },
+  "routes": {
+    "ingestion": true,
+    "dermal_water": true
+  },
+  "speciation_source": "phreeqc_bio",
+  "phreeqc_bio_path": "external\\table_bioavailable_concentrations.csv",
+  "phreeqc_frac_path": "external\\table_species_fractions.csv",
+  "censored": false,
+  "systemic_metals": [
+    "As",
+    "Ni",
+    "Zn"
+  ]
+}

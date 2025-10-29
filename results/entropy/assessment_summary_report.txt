@@ -1,0 +1,48 @@
+# ENTROPY-BASED POLLUTION INDEX ASSESSMENT REPORT
+=======================================================
+
+## Data Quality Summary
+- Total sites analyzed: 70
+- Metals analyzed: 11
+
+### Data Quality Issues Addressed:
+- Missing values: 0
+- Negative values: 0
+- Non-detects: 46
+
+## Entropy Weight Analysis
+Metals ranked by information content (weight):
+
+- Cd: 0.448
+- Hg: 0.218
+- Cr: 0.132
+- Co: 0.076
+- Ni: 0.069
+- As: 0.009
+- Cu: 0.009
+- Fe: 0.009
+- Mn: 0.009
+- Pb: 0.009
+- Zn: 0.009
+
+## Risk Assessment Results
+
+### Heavy Metal Pollution Index (HPI):
+- Mean HPI: 0.4
+- Range: 0.1 - 0.8
+
+- Low risk sites: 70 (100.0%)
+
+### Potential Ecological Risk Index (PERI):
+- Mean PERI: 9.1
+- Range: 1.4 - 22.9
+
+- Low risk sites: 70 (100.0%)
+
+## Recommendations
+
+- No sites require immediate intervention based on current thresholds
+
+- Monitor sites with moderate risk levels regularly
+- Validate results with additional sampling if high uncertainty
+- Consider site-specific background concentrations for essential metals

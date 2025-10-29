@@ -1,0 +1,22 @@
+# Template dermal_water_kp.yml
+# Literature-validated dermal permeability coefficients (Kp) in cm/hour
+# Values from EPA RAGS Part E, ATSDR EDG 2018, and peer-reviewed literature
+# For groundwater exposure assessment via dermal contact
+
+Kp_cm_per_hr:
+  As:      1.0e-3  # EPA RAGS Part E, ATSDR EDG - arsenite default
+  Cd:      1.0e-3  # EPA RAGS Part E - experimental value
+  CrVI:    2.0e-3  # EPA RAGS Part E - chromium (+6) 
+  CrIII:   1.0e-3  # EPA RAGS Part E - chromium (+3)
+  Cr:      1.0e-3  # Default when oxidation state unspecified (conservative Cr(III) value)
+  Ni:      2.0e-4  # EPA RAGS Part E, ATSDR EDG
+  Mn:      1.0e-3  # ATSDR EDG, literature default for inorganics
+  Cu:      1.0e-3  # EPA RAGS Part E - "other inorganics" default
+  Pb:      1.0e-4  # EPA RAGS Part E, S-Risk - relatively poor skin penetration
+  Hg:      1.0e-3  # EPA RAGS Part E - mercury salts/inorganic forms
+  Hg(0): 1.0e-3  # S-Risk default inorganic value (aqueous form)
+  Hg(I): 1.0e-3  # Default inorganic mercury value
+  Hg(II): 1.0e-3 # Same as inorganic mercury salts
+  Co:      4.0e-4  # EPA RAGS Part E
+  Fe:      1.0e-3  # Default for "other inorganics" - not individually listed in RAGS
+  Zn:      6.0e-4  # EPA RAGS Part E, ATSDR EDG

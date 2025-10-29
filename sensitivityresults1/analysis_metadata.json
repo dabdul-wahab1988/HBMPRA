@@ -1,0 +1,425 @@
+{
+  "method": "sobol",
+  "timestamp": "2025-10-02T06:57:32.411308",
+  "n_parameters": 56,
+  "parameter_names": [
+    "BW_Adults",
+    "IR_Adults",
+    "EF_Adults",
+    "ED_Adults",
+    "AT_nc_Adults",
+    "AT_ca_Adults",
+    "SA_Adults",
+    "AF_Adults",
+    "ET_Adults",
+    "BW_Children",
+    "IR_Children",
+    "EF_Children",
+    "ED_Children",
+    "AT_nc_Children",
+    "AT_ca_Children",
+    "SA_Children",
+    "AF_Children",
+    "ET_Children",
+    "BW_Teens",
+    "IR_Teens",
+    "EF_Teens",
+    "ED_Teens",
+    "AT_nc_Teens",
+    "AT_ca_Teens",
+    "SA_Teens",
+    "AF_Teens",
+    "ET_Teens",
+    "BW_Pregnant",
+    "IR_Pregnant",
+    "EF_Pregnant",
+    "ED_Pregnant",
+    "AT_nc_Pregnant",
+    "AT_ca_Pregnant",
+    "SA_Pregnant",
+    "AF_Pregnant",
+    "ET_Pregnant",
+    "C_As",
+    "C_Cd",
+    "C_Co",
+    "C_Cu",
+    "C_Fe",
+    "C_Hg",
+    "C_Mn",
+    "C_Ni",
+    "C_Pb",
+    "C_Zn",
+    "Kp_As",
+    "Kp_Cd",
+    "Kp_Co",
+    "Kp_Cu",
+    "Kp_Fe",
+    "Kp_Hg",
+    "Kp_Mn",
+    "Kp_Ni",
+    "Kp_Pb",
+    "Kp_Zn"
+  ],
+  "bounds": [
+    [
+      40.60000000000001,
+      99.39999999999999
+    ],
+    [
+      0.6023884238244043,
+      6.6402338454730945
+    ],
+    [
+      0.5,
+      1.0
+    ],
+    [
+      15.0,
+      60.0
+    ],
+    [
+      15.0,
+      60.0
+    ],
+    [
+      35.0,
+      140.0
+    ],
+    [
+      3989.9999999999995,
+      7410.0
+    ],
+    [
+      0.25,
+      1.0
+    ],
+    [
+      0.29,
+      1.16
+    ],
+    [
+      8.700000000000001,
+      21.299999999999997
+    ],
+    [
+      0.30119421191220214,
+      3.3201169227365472
+    ],
+    [
+      0.5,
+      1.0
+    ],
+    [
+      3.0,
+      12.0
+    ],
+    [
+      3.0,
+      12.0
+    ],
+    [
+      35.0,
+      140.0
+    ],
+    [
+      1959.9999999999998,
+      3640.0
+    ],
+    [
+      0.45,
+      1.0
+    ],
+    [
+      0.5,
+      2.0
+    ],
+    [
+      29.000000000000004,
+      71.0
+    ],
+    [
+      0.4517913178683032,
+      4.980175384104821
+    ],
+    [
+      0.5,
+      1.0
+    ],
+    [
+      6.5,
+      26.0
+    ],
+    [
+      6.5,
+      26.0
+    ],
+    [
+      35.0,
+      140.0
+    ],
+    [
+      3150.0,
+      5850.0
+    ],
+    [
+      0.35,
+      1.0
+    ],
+    [
+      0.375,
+      1.5
+    ],
+    [
+      34.800000000000004,
+      85.19999999999999
+    ],
+    [
+      0.5421495814419639,
+      5.976210460925786
+    ],
+    [
+      0.5,
+      1.0
+    ],
+    [
+      0.5,
+      2.0
+    ],
+    [
+      1.0,
+      2.0
+    ],
+    [
+      35.0,
+      140.0
+    ],
+    [
+      3500.0,
+      6500.0
+    ],
+    [
+      0.4,
+      1.0
+    ],
+    [
+      0.33,
+      1.32
+    ],
+    [
+      0.4842857142857142,
+      48.428571428571416
+    ],
+    [
+      0.11228574571428569,
+      11.228574571428569
+    ],
+    [
+      0.3232857185714286,
+      32.32857185714286
+    ],
+    [
+      6.843285714285713,
+      684.3285714285713
+    ],
+    [
+      4.616714285714285,
+      461.67142857142846
+    ],
+    [
+      0.24171429857142857,
+      24.171429857142854
+    ],
+    [
+      3.578857142857143,
+      357.8857142857143
+    ],
+    [
+      0.3282857142857143,
+      32.82857142857142
+    ],
+    [
+      0.6141428571428571,
+      61.414285714285704
+    ],
+    [
+      8.057142857142857,
+      805.7142857142857
+    ],
+    [
+      0.0001,
+      0.01
+    ],
+    [
+      0.0001,
+      0.01
+    ],
+    [
+      4e-05,
+      0.004
+    ],
+    [
+      0.0001,
+      0.01
+    ],
+    [
+      0.0001,
+      0.01
+    ],
+    [
+      0.0001,
+      0.01
+    ],
+    [
+      0.0001,
+      0.01
+    ],
+    [
+      2e-05,
+      0.002
+    ],
+    [
+      1e-05,
+      0.001
+    ],
+    [
+      5.9999999999999995e-05,
+      0.005999999999999999
+    ]
+  ],
+  "metadata": {
+    "groups": [
+      "Adults",
+      "Children",
+      "Teens",
+      "Pregnant"
+    ],
+    "metals": [
+      "As",
+      "Cd",
+      "Co",
+      "Cu",
+      "Fe",
+      "Hg",
+      "Mn",
+      "Ni",
+      "Pb",
+      "Zn"
+    ],
+    "parameter_types": {
+      "BW_Adults": "demographic",
+      "IR_Adults": "exposure",
+      "EF_Adults": "temporal",
+      "ED_Adults": "temporal",
+      "AT_nc_Adults": "temporal",
+      "AT_ca_Adults": "temporal",
+      "SA_Adults": "dermal",
+      "AF_Adults": "dermal",
+      "ET_Adults": "dermal",
+      "BW_Children": "demographic",
+      "IR_Children": "exposure",
+      "EF_Children": "temporal",
+      "ED_Children": "temporal",
+      "AT_nc_Children": "temporal",
+      "AT_ca_Children": "temporal",
+      "SA_Children": "dermal",
+      "AF_Children": "dermal",
+      "ET_Children": "dermal",
+      "BW_Teens": "demographic",
+      "IR_Teens": "exposure",
+      "EF_Teens": "temporal",
+      "ED_Teens": "temporal",
+      "AT_nc_Teens": "temporal",
+      "AT_ca_Teens": "temporal",
+      "SA_Teens": "dermal",
+      "AF_Teens": "dermal",
+      "ET_Teens": "dermal",
+      "BW_Pregnant": "demographic",
+      "IR_Pregnant": "exposure",
+      "EF_Pregnant": "temporal",
+      "ED_Pregnant": "temporal",
+      "AT_nc_Pregnant": "temporal",
+      "AT_ca_Pregnant": "temporal",
+      "SA_Pregnant": "dermal",
+      "AF_Pregnant": "dermal",
+      "ET_Pregnant": "dermal",
+      "C_As": "concentration",
+      "C_Cd": "concentration",
+      "C_Co": "concentration",
+      "C_Cu": "concentration",
+      "C_Fe": "concentration",
+      "C_Hg": "concentration",
+      "C_Mn": "concentration",
+      "C_Ni": "concentration",
+      "C_Pb": "concentration",
+      "C_Zn": "concentration",
+      "Kp_As": "dermal",
+      "Kp_Cd": "dermal",
+      "Kp_Co": "dermal",
+      "Kp_Cu": "dermal",
+      "Kp_Fe": "dermal",
+      "Kp_Hg": "dermal",
+      "Kp_Mn": "dermal",
+      "Kp_Ni": "dermal",
+      "Kp_Pb": "dermal",
+      "Kp_Zn": "dermal"
+    },
+    "baseline_values": {
+      "BW_Adults": 70,
+      "IR_Adults": 2.0,
+      "EF_Adults": 1.0,
+      "ED_Adults": 30.0,
+      "AT_nc_Adults": 30.0,
+      "AT_ca_Adults": 70.0,
+      "SA_Adults": 5700,
+      "AF_Adults": 0.5,
+      "ET_Adults": 0.58,
+      "BW_Children": 15,
+      "IR_Children": 1.0,
+      "EF_Children": 1.0,
+      "ED_Children": 6.0,
+      "AT_nc_Children": 6.0,
+      "AT_ca_Children": 70.0,
+      "SA_Children": 2800,
+      "AF_Children": 0.9,
+      "ET_Children": 1.0,
+      "BW_Teens": 50,
+      "IR_Teens": 1.5,
+      "EF_Teens": 1.0,
+      "ED_Teens": 13.0,
+      "AT_nc_Teens": 13.0,
+      "AT_ca_Teens": 70.0,
+      "SA_Teens": 4500,
+      "AF_Teens": 0.7,
+      "ET_Teens": 0.75,
+      "BW_Pregnant": 60,
+      "IR_Pregnant": 1.8,
+      "EF_Pregnant": 1.0,
+      "ED_Pregnant": 1.0,
+      "AT_nc_Pregnant": 1.0,
+      "AT_ca_Pregnant": 70.0,
+      "SA_Pregnant": 5000,
+      "AF_Pregnant": 0.8,
+      "ET_Pregnant": 0.66,
+      "C_As": 4.842857142857142,
+      "C_Cd": 1.122857457142857,
+      "C_Co": 3.232857185714286,
+      "C_Cu": 68.43285714285713,
+      "C_Fe": 46.16714285714285,
+      "C_Hg": 2.4171429857142854,
+      "C_Mn": 35.78857142857143,
+      "C_Ni": 3.2828571428571425,
+      "C_Pb": 6.141428571428571,
+      "C_Zn": 80.57142857142857,
+      "Kp_As": 0.001,
+      "Kp_Cd": 0.001,
+      "Kp_Co": 0.0004,
+      "Kp_Cu": 0.001,
+      "Kp_Fe": 0.001,
+      "Kp_Hg": 0.001,
+      "Kp_Mn": 0.001,
+      "Kp_Ni": 0.0002,
+      "Kp_Pb": 0.0001,
+      "Kp_Zn": 0.0006
+    }
+  }
+}

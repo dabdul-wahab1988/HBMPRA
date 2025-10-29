@@ -1,0 +1,14 @@
+analyte,who_gv_ugL,who_gv_mgL,notes,source_url
+Arsenic (As),10,0.01,"Provisional (P); keep as low as possible",https://cdn.who.int/media/docs/default-source/wash-documents/water-safety-and-quality/chemical-fact-sheets-2022/arsenic-fact-sheet-2022.pdf
+Lead (Pb),10,0.01,"Provisional (P) due to treatment/analytical achievability",https://cdn.who.int/media/docs/default-source/wash-documents/water-safety-and-quality/chemical-fact-sheets-2022/lead-fact-sheet-2022.pdf
+Cadmium (Cd),3,0.003,"",https://www.who.int/docs/default-source/wash-documents/wash-chemicals/cadmium-chemical-fact-sheet.pdf
+Chromium (total),50,0.05,"Provisional (P); total chromium",https://cdn.who.int/media/docs/default-source/wash-documents/water-safety-and-quality/chemical-fact-sheets-2022/chromium-fact-sheet-2022.pdf
+Mercury (inorganic),6,0.006,"Scope: inorganic mercury only",https://www.ncbi.nlm.nih.gov/books/NBK579460/table/ch12.tab94/
+Nickel (Ni),70,0.07,"",https://cdn.who.int/media/docs/default-source/wash-documents/water-safety-and-quality/chemical-fact-sheets-2022/nickel-fact-sheet-2022.pdf
+Copper (Cu),2000,2,"",https://cdn.who.int/media/docs/default-source/wash-documents/water-safety-and-quality/chemical-fact-sheets-2022/copper-fact-sheet-2022.pdf
+Manganese (Mn),400,0.4,"Health-based value; appearance/taste may drive lower ops limits",https://www.ncbi.nlm.nih.gov/books/NBK572637/table/ch8.tab1/
+Antimony (Sb),20,0.02,"",https://www.ncbi.nlm.nih.gov/books/NBK579460/table/ch12.tab8/
+Selenium (Se),40,0.04,"Provisional (P)",https://www.ncbi.nlm.nih.gov/books/NBK579460/table/ch12.tab123/
+Uranium (U),30,0.03,"Provisional (P); chemical toxicity basis",https://www.ncbi.nlm.nih.gov/books/NBK579453/table/annex3.tab3/
+Barium (Ba),1300,1.3,"",https://cdn.who.int/media/docs/default-source/wash-documents/wash-chemicals/barium-background-jan17.pdf
+Cobalt (Co),NA,NA,"No WHO guideline value (GV) established",https://dwqr.scot/private-water-supplies/technical-guidance-on-chemical-contaminants/cobalt/

@@ -1,0 +1,19 @@
+C:\Users\DicksonAbdul-Wahab\Documents\gen\Scripts\activate.ps1; python speciation_modeling.py --input measured_concentrations.csv --output-dir results; python hbmpra_optimized.py --chemistry measured_concentrations.csv --results-dir results/run_2025 --use-bioavailable --draws 2000 --tune 2000 --seed 12; python .\plot_diagnostics.py --model-file .\results\model.pkl --trace-file .\results\trace.nc --output-dir .\results\diagnostics; python entropy_hpi_peri.py --input measured_concentrations.csv --standards standards.csv --toxicities toxicity.csv --output-dir results/entropy; python sensitivity_analysis.py --method sobol --n-samples 1000 --output-dir sensitivityresults1 --filter-threshold 0.01
+
+
+
+# Default filtering (threshold = 0.001)
+python sensitivity_analysis.py --method sobol
+                                              
+# Strict filtering (threshold = 0.01 = 1%)
+python sensitivity_analysis.py --method sobol --filter-threshold 0.01
+                                              
+# Very permissive filtering (threshold = 0.0001)
+python sensitivity_analysis.py --method sobol --filter-threshold 0.0001                                               
+
+
+
+
+
+
+

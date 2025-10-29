@@ -1,0 +1,2 @@
+KMO overall: 0.5190921056743395
+Bartlett's test statistic: 1025.5263835653384, p-value: 7.391853246446096e-151
