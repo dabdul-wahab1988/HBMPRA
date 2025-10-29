@@ -1,8 +1,8 @@
 # HBMPRA
 
-Human Bioavailability Model / Probabilistic Risk Assessment (HBMPRA)
+Hierarchical Bayesian Model for Human Bioavailability and Probabilistic Risk Assessment (HBMPRA)
 
-This repository contains code, data, and results for the HBMPRA project. The project contains scripts for exposure/speciation modeling, sensitivity analysis, plotting, and result summaries. Key scripts are Python files in the repository root and helper modules in the same tree.
+This repository contains code, data, and results for the HBMPRA project. The core of the project is a Hierarchical Bayesian modeling framework used for exposure/speciation modeling and probabilistic risk assessment. The codebase includes scripts for model execution, sensitivity analysis, plotting, and result summaries. Key scripts are Python files in the repository root and helper modules in the same tree.
 
 ## Highlights
 - Core scripts: `hbmpra_optimized.py`, `bll_engines.py`, `speciation_modeling.py`, `sensitivity_analysis.py`
