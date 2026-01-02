@@ -11,16 +11,21 @@ tags:
   - blood lead level
 authors:
   - name: Dickson Abdul-Wahab
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0001-7446-5909
+    email: dabdul-wahab@live.com
     equal-contrib: true
     affiliation: 1
     corresponding: true
   - name: Ebenezer Aquisman Asare
+    orcid: 0000-0003-1185-1479
+    email: aquisman1989@gmail.com
     equal-contrib: true
-    affiliation: 1
+    affiliation: 2
 affiliations:
  - name: University of Ghana, Ghana
    index: 1
+ - name: Organic Laboratory Research, Atomic Energy Commission (GAEC), Nuclear Chemistry and Environmental Research Centre, National Nuclear Research Institute (NNRI), Legon-Accra, Ghana
+   index: 2
 date: 2 January 2026
 bibliography: paper.bib
 ---

@@ -18,7 +18,16 @@ Usage:
     python summary_tables.py --results-dir results_myanalysis
     python summary_tables.py --results-dir results_test --input data1.csv
     
-Author: Dickson Abdul-Wahab (University of Ghana) & Ebenezer Aquisman Asare
+Authors:
+    - Dickson Abdul-Wahab — University of Ghana, Ghana
+        Email: dabdul-wahab@live.com
+        ORCID: https://orcid.org/0000-0001-7446-5909
+        LinkedIn: https://www.linkedin.com/in/dickson-abdul-wahab-0764a1a9
+        ResearchGate: https://www.researchgate.net/profile/Dickson-Abdul-Wahab
+    - Ebenezer Aquisman Asare — Organic Laboratory Research, Atomic Energy Commission (GAEC), Nuclear Chemistry and Environmental Research Centre, National Nuclear Research Institute (NNRI), Legon-Accra, Ghana
+        Email: aquisman1989@gmail.com
+        ORCID: https://orcid.org/0000-0003-1185-1479
+        ResearchGate: https://www.researchgate.net/profile/Ebenezer-Aquisman-Asare
 """
 
 import os

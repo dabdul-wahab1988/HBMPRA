@@ -264,13 +264,16 @@ MIT License — See [LICENSE](LICENSE) for details.
 
 ## 👥 Authors
 
-- **Dickson Abdul-Wahab**
-  [![ORCID](https://img.shields.io/badge/ORCID-0000--0001--7446--5909-green.svg)](https://orcid.org/0000-0001--7446--5909)
-  [![LinkedIn](https://img.shields.io/badge/LinkedIn-dickson--abdul--wahab-blue.svg)](https://www.linkedin.com/in/dickson-abdul-wahab-0764a1a9)
-  [![ResearchGate](https://img.shields.io/badge/ResearchGate-Dickson--Abdul--Wahab-00CCBB.svg)](https://www.researchgate.net/profile/Dickson-Abdul-Wahab)
+- **Dickson Abdul-Wahab** — University of Ghana, Ghana
+  Email: [dabdul-wahab@live.com](mailto:dabdul-wahab@live.com)
+  ORCID: [0000-0001-7446-5909](https://orcid.org/0000-0001-7446-5909)
+  LinkedIn: [linkedin.com/in/dickson-abdul-wahab-0764a1a9](https://www.linkedin.com/in/dickson-abdul-wahab-0764a1a9)
+  ResearchGate: [researchgate.net/profile/Dickson-Abdul-Wahab](https://www.researchgate.net/profile/Dickson-Abdul-Wahab)
 
-- **Ebenezer Aquisman Asare**  
-  [![ORCID](https://img.shields.io/badge/ORCID-0000--0003--1185--1479-green.svg)](https://orcid.org/0000-0003-1185-1479)
+- **Ebenezer Aquisman Asare** — Organic Laboratory Research, Atomic Energy Commission (GAEC), Nuclear Chemistry and Environmental Research Centre, National Nuclear Research Institute (NNRI), Legon-Accra, Ghana
+  Email: [aquisman1989@gmail.com](mailto:aquisman1989@gmail.com)
+  ORCID: [0000-0003-1185-1479](https://orcid.org/0000-0003-1185-1479)
+  ResearchGate: [researchgate.net/profile/Ebenezer-Aquisman-Asare](https://www.researchgate.net/profile/Ebenezer-Aquisman-Asare)
 
 ---
 
