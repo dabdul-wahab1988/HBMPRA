@@ -1,0 +1,136 @@
+# analytes.yml - Analyte Registry for HBMPRA
+# Defines synonyms, units, basis rules, and classification for contaminants
+
+analytes:
+  # ========================
+  # ANIONS (new additions)
+  # ========================
+  fluoride:
+    synonyms: ["F", "F-", "fluoride", "Fluoride", "Fluoride_mgL", "F_mgL"]
+    default_unit: "mg/L"
+    basis: "F"
+    tox_key: "fluoride"
+    target_organ: "skeletal_dental"
+    mixture_group: "anions"
+    guideline_who_mgL: 1.5  # WHO drinking water guideline
+
+  nitrate:
+    synonyms: ["NO3", "NO3-", "nitrate", "Nitrate", "NO3_N", "nitrate_N", "NO3-N", "Nitrate_N"]
+    default_unit: "mg/L"
+    basis_supported: ["NO3", "NO3-N"]
+    default_basis: "NO3"  # Assume NO3 unless column name indicates NO3-N
+    tox_key: "nitrate"
+    target_organ: "hematological"
+    mixture_group: "anions"
+    # Basis autodetect rules:
+    # If column name contains '_N' or 'NO3_N' or 'nitrate_N' => treat as NO3-N
+    # Otherwise => treat as NO3 (unless user overrides)
+    basis_autodetect_patterns:
+      NO3-N: ["_N", "NO3_N", "nitrate_N", "NO3-N", "Nitrate_N"]
+    guideline_who_mgL_NO3: 50   # WHO guideline as NO3
+    guideline_who_mgL_NO3N: 10  # WHO guideline as NO3-N
+
+  # ========================
+  # HEAVY METALS (existing)
+  # ========================
+  arsenic:
+    synonyms: ["As", "arsenic", "Arsenic", "C_As"]
+    default_unit: "µg/L"
+    basis: "As"
+    tox_key: "As"
+    mixture_group: "metals"
+
+  cadmium:
+    synonyms: ["Cd", "cadmium", "Cadmium", "C_Cd"]
+    default_unit: "µg/L"
+    basis: "Cd"
+    tox_key: "Cd"
+    mixture_group: "metals"
+
+  chromium:
+    synonyms: ["Cr", "chromium", "Chromium", "C_Cr", "CrVI", "CrIII"]
+    default_unit: "µg/L"
+    basis: "Cr"
+    tox_key: "Cr"
+    mixture_group: "metals"
+
+  copper:
+    synonyms: ["Cu", "copper", "Copper", "C_Cu"]
+    default_unit: "µg/L"
+    basis: "Cu"
+    tox_key: "Cu"
+    mixture_group: "metals"
+
+  lead:
+    synonyms: ["Pb", "lead", "Lead", "C_Pb"]
+    default_unit: "µg/L"
+    basis: "Pb"
+    tox_key: "Pb"
+    mixture_group: "metals"
+
+  mercury:
+    synonyms: ["Hg", "mercury", "Mercury", "C_Hg", "Hg(II)", "MeHg"]
+    default_unit: "µg/L"
+    basis: "Hg"
+    tox_key: "Hg"
+    mixture_group: "metals"
+
+  manganese:
+    synonyms: ["Mn", "manganese", "Manganese", "C_Mn"]
+    default_unit: "µg/L"
+    basis: "Mn"
+    tox_key: "Mn"
+    mixture_group: "metals"
+
+  nickel:
+    synonyms: ["Ni", "nickel", "Nickel", "C_Ni"]
+    default_unit: "µg/L"
+    basis: "Ni"
+    tox_key: "Ni"
+    mixture_group: "metals"
+
+  zinc:
+    synonyms: ["Zn", "zinc", "Zinc", "C_Zn"]
+    default_unit: "µg/L"
+    basis: "Zn"
+    tox_key: "Zn"
+    mixture_group: "metals"
+
+  aluminum:
+    synonyms: ["Al", "aluminum", "Aluminum", "C_Al"]
+    default_unit: "µg/L"
+    basis: "Al"
+    tox_key: "Al"
+    mixture_group: "metals"
+
+  vanadium:
+    synonyms: ["V", "vanadium", "Vanadium", "C_V"]
+    default_unit: "µg/L"
+    basis: "V"
+    tox_key: "V"
+    mixture_group: "metals"
+
+  iron:
+    synonyms: ["Fe", "iron", "Iron", "C_Fe"]
+    default_unit: "µg/L"
+    basis: "Fe"
+    tox_key: "Fe"
+    mixture_group: "metals"
+
+  cobalt:
+    synonyms: ["Co", "cobalt", "Cobalt", "C_Co"]
+    default_unit: "µg/L"
+    basis: "Co"
+    tox_key: "Co"
+    mixture_group: "metals"
+
+# Conversion constants
+conversions:
+  nitrate:
+    # Molecular weights for basis conversion
+    # NO3 molecular weight: 62 g/mol
+    # N atomic weight: 14 g/mol
+    # C_NO3N = C_NO3 * (14/62)
+    # C_NO3 = C_NO3N * (62/14)
+    NO3_to_NO3N: 0.2258  # 14/62
+    NO3N_to_NO3: 4.4286  # 62/14

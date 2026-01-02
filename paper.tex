@@ -1,0 +1,341 @@
+% HBMPRA: A Hierarchical Bayesian Model for Probabilistic Risk Assessment
+% LaTeX Version
+
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{authblk}
+
+% Page geometry
+\geometry{margin=1in}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    citecolor=blue,
+}
+
+% Title and authors
+\title{\textbf{HBMPRA: A Hierarchical Bayesian Model for Probabilistic Risk Assessment of Heavy Metals and Anions in Drinking Water}}
+
+\author[1]{Dickson Abdul-Wahab\thanks{Corresponding author: \href{mailto:your.email@example.com}{your.email@example.com}}}
+\author[1]{Ebenezer Aquisman Asare}
+
+\affil[1]{University of Ghana, Ghana}
+
+\date{January 2, 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Groundwater contamination by heavy metals and toxic anions poses significant public health risks worldwide, particularly in developing regions where groundwater serves as the primary drinking water source. Traditional risk assessment methods often rely on point estimates and fail to capture the full spectrum of uncertainty in exposure pathways, population variability, and chemical speciation dynamics. HBMPRA (Hierarchical Bayesian Model for Probabilistic Risk Assessment) is a comprehensive Python framework that addresses these limitations by integrating thermodynamic speciation modeling, Bayesian hierarchical inference, and population-specific pharmacokinetic modeling to provide scientifically rigorous probabilistic risk assessments for drinking water contamination. The framework combines PHREEQC thermodynamic equilibrium calculations to determine bioavailable metal species, PyMC-based Bayesian models to quantify uncertainty in exposure parameters, and multi-organ hazard index calculations to assess organ-specific health risks. HBMPRA supports 13 heavy metals (As, Cd, Cr, Cu, Hg, Pb, Mn, Fe, Zn, Ni, Co, Al, V) and 2 toxic anions (Fluoride, Nitrate), evaluates risks across four demographic groups (adults, children, teens, pregnant women), and provides blood lead level (BLL) predictions calibrated to CDC reference values.
+\end{abstract}
+
+\noindent\textbf{Keywords:} Environmental health, Risk assessment, Bayesian statistics, Water quality, Toxicology, PHREEQC, Blood lead level, Python
+
+\section{Introduction}
+
+Environmental risk assessment is a critical tool for protecting public health from chemical exposures, yet existing approaches suffer from several fundamental limitations:
+
+\begin{enumerate}
+    \item \textbf{Deterministic methods ignore uncertainty}: Traditional EPA Risk Assessment Guidance \citep{USEPA:1989} uses point estimates for exposure parameters (body weight, water intake, exposure duration), providing no quantitative measure of confidence or probability of exceedance.
+
+    \item \textbf{Total concentration overestimates risk}: Regulatory assessments typically use total dissolved metal concentrations rather than bioavailable species fractions, leading to conservative but scientifically inaccurate risk estimates \citep{Nordstrom:2014}.
+
+    \item \textbf{Single-organ hazard indices miss critical pathways}: Summing hazard quotients across all metals and all organs obscures organ-specific vulnerabilities (e.g., manganese neurotoxicity, cadmium nephrotoxicity).
+
+    \item \textbf{Blood lead models lack population specificity}: Existing BLL prediction tools do not differentiate between mechanistic pharmacokinetic models appropriate for adults versus empirical dose-response relationships necessary for vulnerable populations (children, pregnant women) with higher lead absorption rates \citep{ATSDR:2020}.
+
+    \item \textbf{Censored data handling}: Environmental datasets frequently contain left-censored values (below detection limit), which are often handled naively (LOD/2 substitution) rather than with statistically rigorous maximum likelihood methods.
+
+    \item \textbf{Lack of integrated sensitivity analysis}: Few tools provide global sensitivity analysis to identify which parameters most influence risk predictions, hampering targeted data collection efforts.
+\end{enumerate}
+
+\texttt{HBMPRA} was designed to address all of these limitations in a single integrated workflow. The framework enables environmental researchers, public health officials, and regulatory agencies to quantify uncertainty rigorously using Bayesian hierarchical models that propagate uncertainty from raw measurements through to final risk metrics.
+
+\section{Mathematical Foundations}
+
+HBMPRA implements several interconnected mathematical models spanning chemical equilibrium thermodynamics, Bayesian hierarchical modeling, and pharmacokinetics.
+
+\subsection{Thermodynamic Speciation}
+
+Chemical speciation is modeled using PHREEQC \citep{Parkhurst:1999}, which minimizes the total Gibbs free energy:
+
+\begin{equation}
+G = \sum_{i=1}^{n} n_i \left( \mu_i^0 + RT \ln a_i \right)
+\end{equation}
+
+subject to mass balance constraints $\sum a_{ij} n_i = b_j$, where $a_{ij}$ is the stoichiometry of element $j$ in species $i$, $\mu_i^0$ is the standard chemical potential, and $a_i$ is the activity. Activity corrections for ionic strength use the Davies equation:
+
+\begin{equation}
+\log \gamma_i = -A z_i^2 \left( \frac{\sqrt{I}}{1 + \sqrt{I}} - 0.3 I \right)
+\end{equation}
+
+where $A = 0.5085$ at 25°C, $z_i$ is the ionic charge, and $I = \frac{1}{2}\sum c_i z_i^2$ is the ionic strength.
+
+\subsection{Censored Data Imputation}
+
+For left-censored data (concentrations below detection limit), HBMPRA uses maximum likelihood estimation assuming lognormal distributions. For a truncated lognormal with upper bound $L$ (the LOD), the conditional expectation is:
+
+\begin{equation}
+E[X | X < L] = \frac{\exp(\mu + \sigma^2/2) \cdot \Phi\left(\frac{\ln(L) - \mu - \sigma^2}{\sigma}\right)}{\Phi\left(\frac{\ln(L) - \mu}{\sigma}\right)}
+\label{eq:censored}
+\end{equation}
+
+where $\Phi(\cdot)$ is the standard normal CDF and $(\mu, \sigma^2)$ are fitted from uncensored observations via L-BFGS-B optimization.
+
+\subsection{Bayesian Exposure Model}
+
+Population parameters use non-centered parameterization for efficient MCMC sampling. Body weight follows:
+
+\begin{align}
+z_{bw} &\sim \mathcal{N}(0, 1) \\
+\log(BW_g) &= \mu_{\log,bw} + z_{bw} \cdot \sigma_{\log,bw}
+\end{align}
+
+where $\sigma_{\log,bw} = \sqrt{\ln(1 + CV^2)}$ with $CV = 0.21$ representing inter-individual variability.
+
+Ingestion rate per kg body weight:
+
+\begin{align}
+z_{ir} &\sim \mathcal{N}(0, 1) \\
+\log(IR_{\text{perkg},g}) &= \mu_{\log,ir} + z_{ir} \cdot \sigma_{\log,ir}
+\end{align}
+
+with $\sigma_{\log,ir} = 0.6$ reflecting higher uncertainty in water consumption patterns.
+
+\subsection{Dose-Response Calculations}
+
+The estimated daily intake (EDI) for ingestion is:
+
+\begin{equation}
+EDI_{\text{ing}} = \frac{C \cdot ABS_{GI} \cdot IR \cdot EF \cdot ED}{BW \cdot AT}
+\label{eq:edi_ing}
+\end{equation}
+
+where $C$ is the bioavailable concentration (mg/L), $ABS_{GI}$ is gastrointestinal absorption fraction, $IR$ is ingestion rate (L/day), $EF$ is exposure frequency (days/year), $ED$ is exposure duration (years), $BW$ is body weight (kg), and $AT$ is averaging time (days).
+
+For dermal exposure via bathing/showering:
+
+\begin{equation}
+EDI_{\text{der}} = \frac{C \cdot K_p \cdot ET \cdot SA \cdot EF \cdot ED \cdot 10^{-3}}{BW \cdot AT}
+\label{eq:edi_der}
+\end{equation}
+
+where $K_p$ is the dermal permeability coefficient (cm/hr), $ET$ is event time per exposure (hr), and $SA$ is skin surface area (cm$^2$).
+
+\subsection{Multi-Organ Hazard Index}
+
+Instead of a single hazard index, HBMPRA calculates organ-specific hazard indices:
+
+\begin{equation}
+HI_{\text{organ}} = \sum_{m \in S_{\text{organ}}} \left( \frac{EDI_{m,\text{ing}}}{RfD_{m,\text{oral}}} + \frac{EDI_{m,\text{der}}}{RfD_{m,\text{derm}}} \right)
+\label{eq:hi_organ}
+\end{equation}
+
+where $S_{\text{organ}}$ is the set of metals targeting that organ (e.g., Mn for neurological, Cd for renal).
+
+Total cancer risk from carcinogenic metals (As, CrVI):
+
+\begin{equation}
+CR_{\text{total}} = \sum_{m \in \text{carcinogens}} \left( EDI_{m,\text{ing}} \cdot SF_{m,\text{oral}} + EDI_{m,\text{der}} \cdot SF_{m,\text{derm}} \right)
+\label{eq:cancer_risk}
+\end{equation}
+
+where $SF$ is the cancer slope factor (risk per mg/kg-day).
+
+\subsection{Blood Lead Level Prediction}
+
+For adults, HBMPRA uses a steady-state one-compartment pharmacokinetic model:
+
+\begin{equation}
+BLL_{\text{ss}} = \frac{I \cdot f_{\text{abs}} \cdot t_{1/2}}{\ln(2) \cdot V_{\text{blood}} \cdot BW}
+\label{eq:bll_adult}
+\end{equation}
+
+where $I$ is lead intake ($\mu$g/day), $f_{\text{abs}}$ is fractional absorption (0.2--0.3 for adults), $t_{1/2}$ is blood half-life ($\sim$30 days), and $V_{\text{blood}} = 0.07$ L/kg.
+
+For children and pregnant women (vulnerable populations), an empirical slope model is used:
+
+\begin{equation}
+BLL = BLL_{\text{background}} + K \cdot I \cdot f_{\text{abs}}
+\label{eq:bll_child}
+\end{equation}
+
+where $K \approx 0.17$ $\mu$g/dL per $\mu$g/day for children (higher absorption and sensitivity than adults).
+
+The model outputs posterior distributions for $P(BLL > 3.5 \text{ }\mu\text{g/dL})$, the CDC reference value for children \citep{CDC:2021}.
+
+\section{Implementation Architecture}
+
+HBMPRA is implemented in Python 3.9+ with a modular architecture separating scientific domains:
+
+\begin{itemize}
+    \item \texttt{speciation\_modeling.py}: PHREEQC integration for thermodynamic equilibrium calculations
+    \item \texttt{hbmpra\_optimized.py}: Core Bayesian risk model using PyMC for MCMC sampling
+    \item \texttt{bll\_engines.py}: Population-specific blood lead level calculators
+    \item \texttt{sensitivity\_analysis.py}: Global sensitivity methods (Sobol, Morris, Delta)
+    \item \texttt{entropy\_hpi\_peri.py}: Pollution index calculations
+    \item \texttt{demographics.py}: Population group parameters (body weight, intake rates)
+    \item \texttt{units.py}: Unit conversions and nitrate basis handling
+\end{itemize}
+
+All toxicity reference values (RfD, slope factors) are externalized in \texttt{external/toxref.yml} following the principle of configuration-driven toxicology, ensuring traceability to authoritative sources (EPA IRIS, ATSDR, WHO).
+
+The framework uses vectorized NumPy operations to maximize computational efficiency. For example, dermal hazard quotient calculation is vectorized across (metal $\times$ site $\times$ demographic group) dimensions rather than using nested Python loops, achieving $\sim$10$\times$ speedup.
+
+MCMC sampling employs PyMC's NUTS sampler \citep{Salvatier:2016} with non-centered parameterization, typically converging in 2000 tuning + 2000 draw iterations across 4 chains. Convergence diagnostics ($\hat{R} < 1.01$, effective sample size $> 400$) are automatically computed and reported using ArviZ \citep{Kumar:2019}.
+
+\subsection{Software Dependencies}
+
+\textbf{Required:}
+\begin{itemize}
+    \item \texttt{numpy}, \texttt{pandas} -- Numerical computing and data manipulation
+    \item \texttt{matplotlib}, \texttt{seaborn} -- Visualization
+    \item \texttt{pyyaml} -- Configuration file parsing
+\end{itemize}
+
+\textbf{Optional (for full functionality):}
+\begin{itemize}
+    \item \texttt{pymc} -- Bayesian modeling and MCMC sampling
+    \item \texttt{arviz} -- Posterior analysis and diagnostics
+    \item \texttt{phreeqpython} -- PHREEQC thermodynamic speciation
+    \item \texttt{scipy} -- Optimization and statistical functions
+    \item \texttt{SALib} \citep{Herman:2017} -- Sensitivity analysis methods
+\end{itemize}
+
+The package gracefully degrades when optional dependencies are unavailable (e.g., uses simplified speciation estimates if PHREEQC is not installed).
+
+\section{Validation and Testing}
+
+HBMPRA includes a comprehensive test suite (\texttt{tests/}) covering:
+
+\begin{itemize}
+    \item \textbf{Unit calculations} (\texttt{test\_bll\_engines.py}): Verifies monotonicity of BLL with concentration, correct units
+    \item \textbf{Integration tests} (\texttt{test\_phreeqc\_bio\_integration.py}): End-to-end workflow from raw data to risk outputs
+    \item \textbf{Numeric stability} (\texttt{test\_dermal\_hq\_numeric.py}): Edge cases (zero concentrations, censored data)
+    \item \textbf{Basis conversions} (\texttt{test\_nitrate\_units.py}): Nitrate basis transformations (NO$_3$ vs NO$_3$-N)
+\end{itemize}
+
+All numerical implementations are validated against peer-reviewed literature and regulatory guidance documents (EPA RAGS, ATSDR MRLs, WHO drinking water guidelines \citep{WHO:2017}).
+
+\section{Usage Example}
+
+Interactive mode provides a guided workflow:
+
+\begin{verbatim}
+cd src
+python run_hbmpra.py
+\end{verbatim}
+
+For automated pipelines:
+
+\begin{verbatim}
+python run_hbmpra.py --input ../waterdata/site_chemistry.csv \
+    --output ../results --draws 2000 --tune 2000
+\end{verbatim}
+
+Manual step-by-step workflow:
+
+\begin{verbatim}
+# 1. Speciation modeling
+python speciation_modeling.py --input ../waterdata/data.csv \
+    --output-dir ../results
+
+# 2. Bayesian risk assessment
+python hbmpra_optimized.py --chemistry ../waterdata/data.csv \
+    --results-dir ../results --use-bioavailable
+
+# 3. Generate summary tables and plots
+python summary_tables.py --results-dir ../results
+python plot_result.py --results-dir ../results
+
+# 4. Sensitivity analysis (optional)
+python sensitivity_analysis.py --results-dir ../results \
+    --method sobol --n-samples 2000
+\end{verbatim}
+
+\section{Research Applications}
+
+HBMPRA enables several research applications:
+
+\begin{enumerate}
+    \item \textbf{Probabilistic risk screening}: Identify high-risk sites accounting for uncertainty
+    \item \textbf{Regulatory compliance assessment}: Calculate $P(HI > 1)$ or $P(CR > 10^{-6})$ for decision thresholds
+    \item \textbf{Population vulnerability analysis}: Compare risks across demographic groups
+    \item \textbf{Sensitivity-guided sampling}: Use Sobol indices \citep{Sobol:2001} to prioritize additional data collection
+    \item \textbf{Climate change scenarios}: Assess how changing water chemistry (pH, Eh) affects speciation and risk
+\end{enumerate}
+
+\section{Comparison with Existing Tools}
+
+HBMPRA differs from existing risk assessment software in several key aspects (Table \ref{tab:comparison}).
+
+\begin{table}[H]
+\centering
+\caption{Comparison of HBMPRA with existing risk assessment tools}
+\label{tab:comparison}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Feature} & \textbf{HBMPRA} & \textbf{EPA RSL} & \textbf{RAIS} & \textbf{SADA} \\ \midrule
+Probabilistic & Yes (full Bayesian) & No & Limited & Yes \\
+Speciation modeling & Yes (PHREEQC) & No & No & No \\
+Multi-organ HI & Yes & Lumped & Lumped & Lumped \\
+Population-specific BLL & Yes & No & No & No \\
+Open source & Yes & N/A & No & Proprietary \\
+Global sensitivity & Yes (Sobol/Morris) & No & No & Limited \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\section{Limitations and Future Work}
+
+Current limitations include:
+
+\begin{enumerate}
+    \item \textbf{No inhalation pathway}: Only ingestion and dermal routes are modeled
+    \item \textbf{Methylmercury not predicted}: PHREEQC cannot model bacterial methylation; total Hg only
+    \item \textbf{Steady-state assumption}: Temporal dynamics of exposure are not captured
+    \item \textbf{Single water source}: Does not account for multiple exposure pathways (diet, soil, air)
+\end{enumerate}
+
+Planned enhancements:
+
+\begin{itemize}
+    \item Integration with USEPA CompTox Dashboard for expanded chemical coverage
+    \item Time-series analysis for longitudinal exposure assessment
+    \item Multi-pathway cumulative risk assessment
+    \item Machine learning emulators for faster sensitivity analysis
+\end{itemize}
+
+\section{Conclusion}
+
+HBMPRA provides a comprehensive, scientifically rigorous framework for probabilistic risk assessment of drinking water contamination. By integrating thermodynamic speciation, Bayesian hierarchical modeling, and population-specific pharmacokinetics, the package addresses critical gaps in existing risk assessment methodologies. The open-source implementation, extensive documentation, and comprehensive test suite make HBMPRA accessible to researchers, regulators, and public health professionals worldwide.
+
+\section*{Acknowledgements}
+
+We acknowledge the developers of PyMC, ArviZ, PHREEQC, and SALib for providing essential scientific computing infrastructure. We thank the reviewers and contributors who helped improve the documentation and test coverage. This work builds upon decades of environmental health research by EPA, ATSDR, and WHO.
+
+\section*{Software Availability}
+
+HBMPRA is available as open-source software under the MIT License at: \\
+\url{https://github.com/dabdul-wahab1988/HBMPRA}
+
+\bibliographystyle{unsrtnat}
+\bibliography{paper}
+
+\end{document}

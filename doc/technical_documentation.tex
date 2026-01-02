@@ -1,0 +1,161 @@
+% HBMPRA Technical Documentation
+% Layered: Outline -> Anchors -> Detailed Content
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+
+\title{HBMPRA Technical Documentation\\(Hierarchical Bayesian Model for Probabilistic Risk Assessment for Metals and Anions)}
+\author{Dickson Abdul-Wahab \and Ebenezer Aquisman Asare}
+\date{January 2026}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\clearpage
+
+% ---------------------------------------------------------------------------
+% Layer 1: Outline
+% ---------------------------------------------------------------------------
+\section*{Document Outline (Layer 1)}
+This layer is a concise table of contents for the technical areas we cover. It is meant to be skimmable in under a minute.
+\begin{enumerate}[label=\textbf{O\arabic*}.]
+  \item Introduction and scope
+  \item System architecture and data flow
+  \item Data inputs and validation
+  \item Speciation modeling (PHREEQC + fallbacks)
+  \item Exposure and dose calculations
+  \item Blood Lead Level (BLL) engines and calibration
+  \item Bayesian risk model (PyMC) and outputs
+  \item Plotting, tables, and user workflows
+  \item Sensitivity analysis
+  \item Entropy-based HPI/PERI indices
+  \item Anion-only workflow and nitrate basis handling
+  \item Configuration, CLI, and reproducibility
+\end{enumerate}
+\clearpage
+
+% ---------------------------------------------------------------------------
+% Layer 2: Anchors (Skeleton)
+% ---------------------------------------------------------------------------
+\section*{Section Anchors (Layer 2)}
+Anchors give one-sentence intent for each section so a reviewer knows what to expect. Think of them as promises the detailed layer must keep.
+\begin{description}[leftmargin=1.2cm,labelindent=0cm]
+  \item[Intro] Purpose, supported analytes, design principles.
+  \item[Architecture] Module map: run\_hbmpra, hbmpra\_optimized, speciation\_modeling, bll\_engines, units, plotting, tables.
+  \item[Input] CSV expectations, units, validation rules, missing data handling.
+  \item[Speciation] PHREEQC backends, species selection, missing-total guard, total fallback.
+  \item[Exposure] EDI calculations, unit conversions, nitrate basis conversion, dermal pathways.
+  \item[BLL] Engines (onecomp, slope), auto-selection by demographic, calibration grid, priors.
+  \item[Bayesian Model] Hierarchy, censoring, organ sets, outputs (HI, CR, BLL), storage (trace.nc).
+  \item[Outputs] Diagnostics vs result plots (independent toggles), tables, RUNLOG/ASSUMPTIONS.
+  \item[Sensitivity] Sobol/Morris/Delta workflow, inputs, outputs.
+  \item[Entropy] Entropy weights, HPI, PERI, bootstrap CI.
+  \item[Anion-only] Workflow adjustments, what is computed/skipped.
+  \item[CLI/Config] Presets, flags, reproducibility, key files.
+\end{description}
+\clearpage
+
+% ---------------------------------------------------------------------------
+% Layer 3: Detailed Content (Flesh)
+% ---------------------------------------------------------------------------
+\section{Executive Summary}
+This document records the technical contract of HBMPRA: what the software does, how it is structured, and how to reproduce results. It is written in three layers (outline, anchors, detailed content) so a reviewer can rapidly find depth or skim intent. Scope includes metals + anions, speciation, exposure/dose, BLL engines, Bayesian risk modeling, outputs, sensitivity, entropy indices, anion-only workflows, and reproducibility.
+
+\section{How to Read This Document}
+\begin{itemize}
+  \item Start with the Executive Summary for scope and goals.
+  \item Use Section~\ref{sec:architecture} for a system map and data flow.
+  \item See Sections~\ref{sec:inputs}--\ref{sec:bayes} for core calculations and models.
+  \item Use Section~\ref{sec:outputs} for what gets produced and how plots/tables are controlled.
+  \item Consult Section~\ref{sec:traceability} to map doc content to code and outputs.
+  \item Reproducibility and testing guidance is in Section~\ref{sec:repro}.
+\end{itemize}
+
+\section{Introduction and Scope}
+HBMPRA is a hierarchical Bayesian framework for probabilistic risk assessment of metals and anions in drinking water. It supports 13 metals (As, Cd, Cr, Cu, Hg, Pb, Mn, Fe, Zn, Ni, Co, Al, V) and two anions (fluoride, nitrate), across four demographic groups (Adults, Children, Teens, Pregnant). The tool provides speciation-aware exposure, organ-specific hazard indices, cancer risk for carcinogens, blood lead level estimation, sensitivity analysis, and entropy-based pollution indices.
+
+Design goals: (i) scientifically rigorous defaults (EPA/WHO/IRIS), (ii) guided interactive workflow for non-coders, (iii) reproducible CLI for automation, (iv) graceful fallbacks when inputs or dependencies are partial.
+
+\section{System Architecture and Data Flow}\label{sec:architecture}
+Core modules:\begin{itemize}
+  \item \textbf{run\_hbmpra.py}: interactive/CLI orchestrator, presets, prompts, output management.
+  \item \textbf{hbmpra\_optimized.py}: PyMC model construction, sampling, censoring, organ routing.
+  \item \textbf{speciation\_modeling.py}: PHREEQC integration; skips metals without totals; total fallback option.
+  \item \textbf{bll\_engines.py}: lead pharmacokinetic and empirical engines; auto-selection by demographic.
+  \item \textbf{units.py}: conversions (including nitrate NO$_3$ to NO$_3$--N basis).
+  \item \textbf{plot\_diagnostics.py, plot\_result.py, plot\_panel.py}: diagnostics and results plotting.
+  \item \textbf{sensitivity\_analysis.py}: Sobol, Morris, Delta methods.
+  \item \textbf{entropy\_hpi\_peri.py}: entropy weights, HPI/PERI, bootstrap.
+  \item \textbf{summary\_tables.py}: publication-ready tables.
+\end{itemize}
+Data flow: CSV input $\rightarrow$ validation $\rightarrow$ (optional) speciation $\rightarrow$ BLL calibration $\rightarrow$ Bayesian model $\rightarrow$ diagnostics/results/tables $\rightarrow$ optional sensitivity and entropy analyses. (If you maintain diagrams, link or include them here; no external graphics are embedded in this text-only version.)
+
+\section{Data Inputs and Validation}\label{sec:inputs}
+Input: CSV with site rows; columns may include metals (C\_As or As), anions (F, NO3, NO3\_N), pH, Eh. Validation reports detected metals/anions, pH/Eh availability, and site identifier presence. Units prompt: \textmu g/L default; mg/L triggers automatic $\times 1000$ conversion. Anion-only datasets are supported.
+
+Censoring: Non-detects handled via MLE in \texttt{impute\_censored\_df()} before modeling.
+
+\section{Speciation Modeling}
+PHREEQC backends: prefers \texttt{phreeqpython}, falls back to \texttt{phreeqpy} DLL/COM. Inputs converted to mmol/kgw; species lists cover main metals plus CrVI/CrIII and Hg(II)/Hg(0). Species selection uses mean and coefficient of variation thresholds; \texttt{--use-total-fallback} permits reverting to totals when variation is insufficient.
+
+Missing-total guard: metals lacking total columns are skipped gracefully; other metals proceed. If PHREEQC fails, workflow warns and continues with totals as bioavailable. Outputs: \texttt{table\_bioavailable\_concentrations.csv}, \texttt{table\_species\_fractions.csv}, optional speciation profiles.
+
+\section{Exposure and Dose Calculations}
+Standard EDI: \(EDI = \frac{C \times IR \times EF \times ED}{BW \times AT}\). Units normalized to \textmu g/L. Nitrate basis conversion: NO$_3$ columns converted to NO$_3$--N for toxicity alignment. Dermal pathway uses $K_p$ values from \texttt{external/dermal\_water\_kp.yml}; missing $K_p$ triggers validation error to avoid zero-risk assumptions.
+
+\section{Blood Lead Level Engines and Calibration}
+Engines: \texttt{onecomp} (adult mechanistic) and \texttt{slope} (empirical for children, teens, pregnant). \texttt{auto} selection applies per demographic. Calibration (\texttt{calibrate\_bll\_priors.py}): geometric grid of Pb concentrations, EDI computation, linear fit $BLL=b_0+k\cdot EDI$, stored in \texttt{calibration/priors.json}. Inputs respect mg/L vs \textmu g/L via flags.
+
+\section{Bayesian Risk Model}
+Implemented in \texttt{hbmpra\_optimized.py} with PyMC. Components: censored data imputation, hierarchical priors (log-normal/normal), vectorized EDI, organ-route mapping from \texttt{toxref.yml}, dermal handling, optional bioavailable concentrations. Outputs stored in \texttt{trace.nc} (NetCDF) and \texttt{model.pkl}.
+
+Key outputs: organ-specific HI (e.g., HI\_neuro, HI\_nephro), HI\_overall, cancer risk \texttt{CR\_total} (for carcinogens), \texttt{BLL}. Anion-only mode skips CR and BLL while producing anion HQ/HI.
+
+\section{Plotting, Tables, and User Workflows}\label{sec:outputs}
+Presets: Quick (plots skipped), Standard/Publication (plots on), Custom (independent prompts). Diagnostics (trace, R-hat, ESS) and results (posterior panels, exceedance curves, BLL thresholds) can be toggled separately in Custom mode. Tables: T1–T5 plus PCA/correlation via \texttt{summary\_tables.py}. RUNLOG and ASSUMPTIONS JSON capture configuration and model assumptions.
+
+If diagrams or screenshots are maintained, include them here (workflow decision tree, diagnostics panel, posterior panels, speciation profiles). This text-only version omits external graphics to keep compilation self-contained.
+
+\section{Sensitivity Analysis}
+\texttt{sensitivity\_analysis.py} supports Sobol, Morris, Delta. Inputs: chemistry, priors, toxicity parameters. Outputs: CSV indices and PNG plots in \texttt{sensitivity/}. Publication preset auto-enables; others prompt.
+
+\section{Entropy-Based HPI/PERI}
+\texttt{entropy\_hpi\_peri.py} computes entropy weights, Heavy Metal Pollution Index (HPI), and Potential Ecological Risk Index (PERI) with bootstrap CIs. Requires \texttt{standards.csv} and \texttt{toxicity.csv}; outputs CSV/PNG in \texttt{entropy\_analysis/}.
+
+\section{Anion-Only Workflow and Nitrate Basis}
+If only F/NO3 columns are present, speciation and BLL calibration are skipped; anion HQ and organ-specific HI (skeletal/dental for F, hematological for NO3) and HI\_overall are computed. Nitrate columns are converted to NO$_3$--N basis before HQ/HI.
+
+\section{Traceability to Code and Outputs}\label{sec:traceability}
+\begin{table}[h]
+  \centering
+  \begin{tabular}{@{}p{3cm}p{5cm}p{6cm}@{}}\toprule
+    Doc Section & Source Files & Key Outputs \\\midrule
+    Architecture/Data Flow & run\_hbmpra.py, hbmpra\_optimized.py & RUNLOG.json, ASSUMPTIONS.json \\
+    Inputs/Validation & run\_hbmpra.py, units.py & Validation summary (console) \\
+    Speciation & speciation\_modeling.py & table\_bioavailable\_concentrations.csv, table\_species\_fractions.csv \\
+    Exposure/Dose & hbmpra\_optimized.py, units.py & EDI arrays in trace.nc \\
+    BLL Engines/Cal & bll\_engines.py, calibrate\_bll\_priors.py & calibration/priors.json, BLL in trace.nc \\
+    Bayesian Model & hbmpra\_optimized.py & trace.nc, model.pkl \\
+    Plots/Tables & plot\_diagnostics.py, plot\_result.py, plot\_panel.py, summary\_tables.py & diagnostics/*.png, figures/*.png, tables/*.csv \\
+    Sensitivity & sensitivity\_analysis.py & sensitivity/*.csv, sensitivity/*.png \\
+    Entropy HPI/PERI & entropy\_hpi\_peri.py & entropy\_analysis/*.csv, entropy\_analysis/*.png \\
+    Anion-Only Path & run\_hbmpra.py & HI/HQ (anion), no BLL/CR \\\bottomrule
+  \end{tabular}
+  \caption{Traceability from documentation sections to code and generated outputs.}
+\end{table}
+
+\section{Configuration, CLI, and Reproducibility}\label{sec:repro}
+Interactive: \texttt{python src/run\_hbmpra.py}. Quick mode: \texttt{--input}, \texttt{--units}, \texttt{--skip-*} flags. Presets control draws/tune (1000/1000 quick, 2000/2000 standard, 4000/4000 publication). Outputs are timestamped directories containing trace, figures, tables, calibration, diagnostics, sensitivity, and entropy artifacts.
+
+Reproducibility: retain \texttt{RUNLOG.json} and \texttt{ASSUMPTIONS.json} with results; record Python version and key packages (numpy, pandas, pymc, arviz, phreeqpython). For deterministic reruns, set PyMC seeds explicitly.
+
+Testing/Validation: run \texttt{pytest tests/ -v}; sanity checks include HI thresholds, nitrate basis conversion, BLL calibration completion, and presence of expected outputs (trace.nc, figures/, tables/). Sensitivity and entropy modules emit CSV/PNG deliverables for manual inspection.
+
+\section{Future Work and Enhancements}
+Planned improvements: richer MCMC diagnostics appendix, spatial extensions, surrogate modeling for faster sensitivity sweeps, optional automated seed control, and finalized architecture/decision-tree figures (if maintained as images).
+
+\end{document}
