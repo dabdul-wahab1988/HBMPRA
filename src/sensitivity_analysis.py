@@ -63,9 +63,20 @@ except ImportError:
     raise RuntimeError("SALib is required: pip install SALib")
 
 # Local imports
-from demographics import GROUP_INFO
-from units import CF_ugL_to_mgL, DAYS_PER_YEAR
-from bll_engines import compute_bll_auto, compute_bll_batch_auto, PopulationEngineConfig, classify_population_group
+try:
+    from demographics import GROUP_INFO
+except ImportError:
+    from .demographics import GROUP_INFO
+
+try:
+    from units import CF_ugL_to_mgL, DAYS_PER_YEAR
+except ImportError:
+    from .units import CF_ugL_to_mgL, DAYS_PER_YEAR
+
+try:
+    from bll_engines import compute_bll_auto, compute_bll_batch_auto, PopulationEngineConfig, classify_population_group
+except ImportError:
+    from .bll_engines import compute_bll_auto, compute_bll_batch_auto, PopulationEngineConfig, classify_population_group
 
 # Get the directory where this script lives (src/)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

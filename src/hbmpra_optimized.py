@@ -66,9 +66,17 @@ except Exception:
 
 import yaml
 
-from demographics import GROUP_INFO, GROUP_PRESETS, parse_group_selection, get_group_info_filtered
-from units import (CF_ugL_to_mgL, DAYS_PER_YEAR, 
-                   convert_nitrate_basis_mgL, detect_nitrate_basis_from_column)
+try:
+    from demographics import GROUP_INFO, GROUP_PRESETS, parse_group_selection, get_group_info_filtered
+except ImportError:
+    from .demographics import GROUP_INFO, GROUP_PRESETS, parse_group_selection, get_group_info_filtered
+
+try:
+    from units import (CF_ugL_to_mgL, DAYS_PER_YEAR, 
+                       convert_nitrate_basis_mgL, detect_nitrate_basis_from_column)
+except ImportError:
+    from .units import (CF_ugL_to_mgL, DAYS_PER_YEAR, 
+                        convert_nitrate_basis_mgL, detect_nitrate_basis_from_column)
 
 # Get the directory where this script lives (src/)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -254,7 +262,7 @@ def get_analyte_mixture_group(analyte: str) -> str:
 
 def build_organ_sets(metals: List[str],
                      toxref: Dict,
-                     base_sets: Dict[str, set]) -> Tuple[Dict[str, set], np.ndarray, set, Dict[str, str]]:
+                     base_sets: Optional[Dict[str, set]] = None) -> Tuple[Dict[str, set], np.ndarray, set, Dict[str, str]]:
     """Merge toxref organ entries onto base sets and build systemic mask.
 
     Extended behavior: support route-annotated target_organs entries. Each
@@ -264,6 +272,8 @@ def build_organ_sets(metals: List[str],
     lower-cased organ names to one of 'dermal'|'ingestion'|'both'. If an
     organ has conflicting route annotations, the mapping will be 'both'.
     """
+    if base_sets is None:
+        base_sets = ORGAN_SETS_FALLBACK
     organ_sets = {k.lower(): set(v) for k, v in base_sets.items()}
     canonical = set(organ_sets.keys()) | {"systemic"}
     unknown = set()
@@ -1190,168 +1200,177 @@ def main():
 
     # Create high-precision debug outputs to see the true small values
     summary = {}
-    posterior = az.extract(trace, var_names=[v.name for v in model.deterministics])
+    posterior = None
+    deterministic_names = [v.name for v in model.deterministics]
+    try:
+        posterior = az.extract(trace, var_names=deterministic_names)
+    except KeyError as err:
+        logging.warning("ArviZ extract missing deterministics %s; skipping high-precision summaries.", err)
+    except Exception as err:
+        logging.warning("ArviZ extract failed: %s; skipping high-precision summaries.", err)
 
-    def summarize(name):
-        x = posterior[name].values  # shape: (site, group, samples) after az.extract
-        # Compute statistics over the samples axis (last axis, -1)
-        mean_val = np.mean(x, axis=-1)
-        med = np.median(x, axis=-1)
-        lo  = np.percentile(x, 3.0, axis=-1)
-        hi  = np.percentile(x, 97.0, axis=-1)
-        return {"mean": mean_val.tolist(), "median": med.tolist(), "p3": lo.tolist(), "p97": hi.tolist()}
+    if posterior is not None:
+        def summarize(name):
+            x = posterior[name].values  # shape: (site, group, samples) after az.extract
+            # Compute statistics over the samples axis (last axis, -1)
+            mean_val = np.mean(x, axis=-1)
+            med = np.median(x, axis=-1)
+            lo  = np.percentile(x, 3.0, axis=-1)
+            hi  = np.percentile(x, 97.0, axis=-1)
+            return {"mean": mean_val.tolist(), "median": med.tolist(), "p3": lo.tolist(), "p97": hi.tolist()}
 
-    def summarize_with_samples(name):
-        """Return summary stats plus raw samples for exceedance calculations."""
-        x = posterior[name].values  # shape: (site, group, samples) after az.extract
-        mean_val = np.mean(x, axis=-1)
-        med = np.median(x, axis=-1)
-        lo  = np.percentile(x, 3.0, axis=-1)
-        hi  = np.percentile(x, 97.0, axis=-1)
-        return {
-            "mean": mean_val.tolist(), "median": med.tolist(), 
-            "p3": lo.tolist(), "p97": hi.tolist(),
-            "samples": x  # Keep raw samples for exceedance calculation
-        }
+        def summarize_with_samples(name):
+            """Return summary stats plus raw samples for exceedance calculations."""
+            x = posterior[name].values  # shape: (site, group, samples) after az.extract
+            mean_val = np.mean(x, axis=-1)
+            med = np.median(x, axis=-1)
+            lo  = np.percentile(x, 3.0, axis=-1)
+            hi  = np.percentile(x, 97.0, axis=-1)
+            return {
+                "mean": mean_val.tolist(), "median": med.tolist(), 
+                "p3": lo.tolist(), "p97": hi.tolist(),
+                "samples": x  # Keep raw samples for exceedance calculation
+            }
 
-    def exceedance_prob(samples, threshold):
-        """Compute P(X > threshold) from posterior samples."""
-        return np.mean(samples > threshold, axis=-1)
+        def exceedance_prob(samples, threshold):
+            """Compute P(X > threshold) from posterior samples."""
+            return np.mean(samples > threshold, axis=-1)
 
-    # Process all HI variables
-    for v in model.deterministics:
-        if v.name.startswith("HI_") and "_" in v.name[3:] and any(g in v.name for g in GROUPS):
-            continue  # Skip per-metal per-group aliases like HI_Adults_As
-        if v.name.startswith("HI_"):
+        # Process all HI variables
+        for v in model.deterministics:
+            if v.name.startswith("HI_") and "_" in v.name[3:] and any(g in v.name for g in GROUPS):
+                continue  # Skip per-metal per-group aliases like HI_Adults_As
+            if v.name.startswith("HI_"):
+                try:
+                    summary[v.name] = summarize_with_samples(v.name)
+                except Exception as e:
+                    logging.warning(f"Failed to summarize {v.name}: {e}")
+                    continue
+
+        if summary:
+            # Write high-precision debug outputs
+            outdir = os.path.join(args.results_dir, "debug")
+            os.makedirs(outdir, exist_ok=True)
+            
+            # HI_summary.json (without samples)
+            summary_json = {k: {kk: vv for kk, vv in v.items() if kk != "samples"} for k, v in summary.items()}
+            with open(os.path.join(outdir, "HI_summary.json"), "w") as fh:
+                json.dump(summary_json, fh, indent=2)
+
+            # Write a flat CSV with high precision for human inspection
+            # Include both site name and site index for clarity
+            # Added: probability of exceedance P(HI > 1)
+            rows = []
+            for name, d in summary.items():
+                med = np.array(d["median"])
+                p3  = np.array(d["p3"])
+                p97 = np.array(d["p97"])
+                mean_val = np.array(d["mean"])
+                samples = d["samples"]
+                prob_exceed_1 = exceedance_prob(samples, 1.0)
+                J, G = med.shape
+                for j in range(J):
+                    site_label = site_names[j] if j < len(site_names) else f"Site_{j}"
+                    for gi, g in enumerate(GROUPS):
+                        rows.append({
+                            "organ": name.replace("HI_",""), "site_id": j, "site_name": site_label, "group": g,
+                            "mean": f"{mean_val[j,gi]:.6g}", "median": f"{med[j,gi]:.6g}", 
+                            "p3": f"{p3[j,gi]:.6g}", "p97": f"{p97[j,gi]:.6g}",
+                            "P(HI>1)": f"{prob_exceed_1[j,gi]:.4f}"
+                        })
+            pd.DataFrame(rows).to_csv(os.path.join(outdir, "HI_summary.csv"), index=False)
+
+            # ==================== TCR (CR_total) Summary ====================
             try:
-                summary[v.name] = summarize_with_samples(v.name)
+                cr_data = summarize_with_samples("CR_total")
+                cr_rows = []
+                cr_med = np.array(cr_data["median"])
+                cr_p3 = np.array(cr_data["p3"])
+                cr_p97 = np.array(cr_data["p97"])
+                cr_mean = np.array(cr_data["mean"])
+                cr_samples = cr_data["samples"]
+                
+                # Exceedance probabilities for various thresholds
+                prob_cr_1e4 = exceedance_prob(cr_samples, 1e-4)
+                prob_cr_1e5 = exceedance_prob(cr_samples, 1e-5)
+                prob_cr_1e6 = exceedance_prob(cr_samples, 1e-6)
+                
+                J, G = cr_med.shape
+                for j in range(J):
+                    site_label = site_names[j] if j < len(site_names) else f"Site_{j}"
+                    for gi, g in enumerate(GROUPS):
+                        cr_rows.append({
+                            "site_id": j, "site_name": site_label, "group": g,
+                            "mean": f"{cr_mean[j,gi]:.6g}", "median": f"{cr_med[j,gi]:.6g}",
+                            "p3": f"{cr_p3[j,gi]:.6g}", "p97": f"{cr_p97[j,gi]:.6g}",
+                            "P(TCR>1e-4)": f"{prob_cr_1e4[j,gi]:.4f}",
+                            "P(TCR>1e-5)": f"{prob_cr_1e5[j,gi]:.4f}",
+                            "P(TCR>1e-6)": f"{prob_cr_1e6[j,gi]:.4f}"
+                        })
+                pd.DataFrame(cr_rows).to_csv(os.path.join(outdir, "TCR_summary.csv"), index=False)
+                
+                # Also save JSON
+                cr_json = {k: v for k, v in cr_data.items() if k != "samples"}
+                cr_json["P(TCR>1e-4)"] = prob_cr_1e4.tolist()
+                cr_json["P(TCR>1e-5)"] = prob_cr_1e5.tolist()
+                cr_json["P(TCR>1e-6)"] = prob_cr_1e6.tolist()
+                with open(os.path.join(outdir, "TCR_summary.json"), "w") as fh:
+                    json.dump(cr_json, fh, indent=2)
+                logging.info("TCR_summary.csv and TCR_summary.json saved to debug/")
             except Exception as e:
-                logging.warning(f"Failed to summarize {v.name}: {e}")
-                continue
+                logging.warning(f"Could not generate TCR summary: {e}")
 
-    # Write high-precision debug outputs
-    outdir = os.path.join(args.results_dir, "debug")
-    os.makedirs(outdir, exist_ok=True)
-    
-    # HI_summary.json (without samples)
-    summary_json = {k: {kk: vv for kk, vv in v.items() if kk != "samples"} for k, v in summary.items()}
-    with open(os.path.join(outdir, "HI_summary.json"), "w") as fh:
-        json.dump(summary_json, fh, indent=2)
-
-    # Write a flat CSV with high precision for human inspection
-    # Include both site name and site index for clarity
-    # Added: probability of exceedance P(HI > 1)
-    rows = []
-    for name, d in summary.items():
-        med = np.array(d["median"])
-        p3  = np.array(d["p3"])
-        p97 = np.array(d["p97"])
-        mean_val = np.array(d["mean"])
-        samples = d["samples"]
-        prob_exceed_1 = exceedance_prob(samples, 1.0)
-        J, G = med.shape
-        for j in range(J):
-            site_label = site_names[j] if j < len(site_names) else f"Site_{j}"
-            for gi, g in enumerate(GROUPS):
-                rows.append({
-                    "organ": name.replace("HI_",""), "site_id": j, "site_name": site_label, "group": g,
-                    "mean": f"{mean_val[j,gi]:.6g}", "median": f"{med[j,gi]:.6g}", 
-                    "p3": f"{p3[j,gi]:.6g}", "p97": f"{p97[j,gi]:.6g}",
-                    "P(HI>1)": f"{prob_exceed_1[j,gi]:.4f}"
-                })
-    pd.DataFrame(rows).to_csv(os.path.join(outdir, "HI_summary.csv"), index=False)
-
-    # ==================== TCR (CR_total) Summary ====================
-    try:
-        cr_data = summarize_with_samples("CR_total")
-        cr_rows = []
-        cr_med = np.array(cr_data["median"])
-        cr_p3 = np.array(cr_data["p3"])
-        cr_p97 = np.array(cr_data["p97"])
-        cr_mean = np.array(cr_data["mean"])
-        cr_samples = cr_data["samples"]
-        
-        # Exceedance probabilities for various thresholds
-        prob_cr_1e4 = exceedance_prob(cr_samples, 1e-4)
-        prob_cr_1e5 = exceedance_prob(cr_samples, 1e-5)
-        prob_cr_1e6 = exceedance_prob(cr_samples, 1e-6)
-        
-        J, G = cr_med.shape
-        for j in range(J):
-            site_label = site_names[j] if j < len(site_names) else f"Site_{j}"
-            for gi, g in enumerate(GROUPS):
-                cr_rows.append({
-                    "site_id": j, "site_name": site_label, "group": g,
-                    "mean": f"{cr_mean[j,gi]:.6g}", "median": f"{cr_med[j,gi]:.6g}",
-                    "p3": f"{cr_p3[j,gi]:.6g}", "p97": f"{cr_p97[j,gi]:.6g}",
-                    "P(TCR>1e-4)": f"{prob_cr_1e4[j,gi]:.4f}",
-                    "P(TCR>1e-5)": f"{prob_cr_1e5[j,gi]:.4f}",
-                    "P(TCR>1e-6)": f"{prob_cr_1e6[j,gi]:.4f}"
-                })
-        pd.DataFrame(cr_rows).to_csv(os.path.join(outdir, "TCR_summary.csv"), index=False)
-        
-        # Also save JSON
-        cr_json = {k: v for k, v in cr_data.items() if k != "samples"}
-        cr_json["P(TCR>1e-4)"] = prob_cr_1e4.tolist()
-        cr_json["P(TCR>1e-5)"] = prob_cr_1e5.tolist()
-        cr_json["P(TCR>1e-6)"] = prob_cr_1e6.tolist()
-        with open(os.path.join(outdir, "TCR_summary.json"), "w") as fh:
-            json.dump(cr_json, fh, indent=2)
-        logging.info("TCR_summary.csv and TCR_summary.json saved to debug/")
-    except Exception as e:
-        logging.warning(f"Could not generate TCR summary: {e}")
-
-    # ==================== BLL Summary ====================
-    try:
-        bll_data = summarize_with_samples("BLL")
-        bll_rows = []
-        bll_med = np.array(bll_data["median"])
-        bll_p3 = np.array(bll_data["p3"])
-        bll_p97 = np.array(bll_data["p97"])
-        bll_mean = np.array(bll_data["mean"])
-        bll_samples = bll_data["samples"]
-        
-        # Parse BLL thresholds from args
-        bll_thresholds = [float(x) for x in args.bll_thresholds.split(",")]
-        
-        # Compute exceedance for each threshold
-        bll_exceedance = {}
-        for thr in bll_thresholds:
-            bll_exceedance[thr] = exceedance_prob(bll_samples, thr)
-        
-        J, G = bll_med.shape
-        for j in range(J):
-            site_label = site_names[j] if j < len(site_names) else f"Site_{j}"
-            for gi, g in enumerate(GROUPS):
-                row = {
-                    "site_id": j, "site_name": site_label, "group": g,
-                    "mean": f"{bll_mean[j,gi]:.6g}", "median": f"{bll_med[j,gi]:.6g}",
-                    "p3": f"{bll_p3[j,gi]:.6g}", "p97": f"{bll_p97[j,gi]:.6g}"
-                }
-                # Add exceedance columns for each BLL threshold
+            # ==================== BLL Summary ====================
+            try:
+                bll_data = summarize_with_samples("BLL")
+                bll_rows = []
+                bll_med = np.array(bll_data["median"])
+                bll_p3 = np.array(bll_data["p3"])
+                bll_p97 = np.array(bll_data["p97"])
+                bll_mean = np.array(bll_data["mean"])
+                bll_samples = bll_data["samples"]
+                
+                # Parse BLL thresholds from args
+                bll_thresholds = [float(x) for x in args.bll_thresholds.split(",")]
+                
+                # Compute exceedance for each threshold
+                bll_exceedance = {}
                 for thr in bll_thresholds:
-                    row[f"P(BLL>{thr})"] = f"{bll_exceedance[thr][j,gi]:.4f}"
-                bll_rows.append(row)
-        pd.DataFrame(bll_rows).to_csv(os.path.join(outdir, "BLL_summary.csv"), index=False)
-        
-        # Also save JSON
-        bll_json = {k: v for k, v in bll_data.items() if k != "samples"}
-        for thr in bll_thresholds:
-            bll_json[f"P(BLL>{thr})"] = bll_exceedance[thr].tolist()
-        with open(os.path.join(outdir, "BLL_summary.json"), "w") as fh:
-            json.dump(bll_json, fh, indent=2)
-        logging.info("BLL_summary.csv and BLL_summary.json saved to debug/")
-    except Exception as e:
-        logging.warning(f"Could not generate BLL summary: {e}")
+                    bll_exceedance[thr] = exceedance_prob(bll_samples, thr)
+                
+                J, G = bll_med.shape
+                for j in range(J):
+                    site_label = site_names[j] if j < len(site_names) else f"Site_{j}"
+                    for gi, g in enumerate(GROUPS):
+                        row = {
+                            "site_id": j, "site_name": site_label, "group": g,
+                            "mean": f"{bll_mean[j,gi]:.6g}", "median": f"{bll_med[j,gi]:.6g}",
+                            "p3": f"{bll_p3[j,gi]:.6g}", "p97": f"{bll_p97[j,gi]:.6g}"
+                        }
+                        # Add exceedance columns for each BLL threshold
+                        for thr in bll_thresholds:
+                            row[f"P(BLL>{thr})"] = f"{bll_exceedance[thr][j,gi]:.4f}"
+                        bll_rows.append(row)
+                pd.DataFrame(bll_rows).to_csv(os.path.join(outdir, "BLL_summary.csv"), index=False)
+                
+                # Also save JSON
+                bll_json = {k: v for k, v in bll_data.items() if k != "samples"}
+                for thr in bll_thresholds:
+                    bll_json[f"P(BLL>{thr})"] = bll_exceedance[thr].tolist()
+                with open(os.path.join(outdir, "BLL_summary.json"), "w") as fh:
+                    json.dump(bll_json, fh, indent=2)
+                logging.info("BLL_summary.csv and BLL_summary.json saved to debug/")
+            except Exception as e:
+                logging.warning(f"Could not generate BLL summary: {e}")
 
-    # Log warning if values are extremely small but non-zero
-    max_median = max(np.max(np.array(d["median"])) for d in summary.values())
-    if max_median < 0.01:
-        logging.warning(
-            f"All HI values are very small (max median = {max_median:.2e}). "
-            f"This is expected for low concentrations but may display as 0.0 with default formatting. "
-            f"Check debug/HI_summary.csv for precise values."
-        )
+            # Log warning if values are extremely small but non-zero
+            max_median = max(np.max(np.array(d["median"])) for d in summary.values())
+            if max_median < 0.01:
+                logging.warning(
+                    f"All HI values are very small (max median = {max_median:.2e}). "
+                    f"This is expected for low concentrations but may display as 0.0 with default formatting. "
+                    f"Check debug/HI_summary.csv for precise values."
+                )
 
     # No in-graph censoring: all imputation has been done prior to model fitting.
 
@@ -1406,6 +1425,7 @@ def main():
         RFD_abs_map[m] = rfd_abs
         SF_abs_map[m]  = sf_abs
 
+    dermal_route_enabled = dermal_has_bio or not args.allow_disable_dermal_if_no_bio
     assumptions = {
         "Kp_used": kp_table,
         "kp_key_map": {m: kp_key_map.get(m) for m in metals},
@@ -1417,8 +1437,8 @@ def main():
         "organ_routes_used": organ_routes if organ_routes else {},
         "RFD_abs": RFD_abs_map,
         "SF_abs":  SF_abs_map,
-    # dermal_water route is enabled only if we have non-zero bioavailable concentrations
-    "routes": {"ingestion": True, "dermal_water": bool(dermal_has_bio)},
+    # dermal_water route is enabled unless it was explicitly disabled when no bioavailable concentrations were requested
+    "routes": {"ingestion": True, "dermal_water": bool(dermal_route_enabled)},
         "speciation_source": spec_src,
         "phreeqc_bio_path": bio_path,
         "phreeqc_frac_path": frac_path,

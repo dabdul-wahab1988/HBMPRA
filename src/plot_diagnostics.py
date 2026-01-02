@@ -121,7 +121,10 @@ import arviz as az
 import pymc as pm
 import matplotlib.pyplot as plt
 import seaborn as sns
-from demographics import GROUP_INFO as GROUPS
+try:
+    from demographics import GROUP_INFO as GROUPS
+except ImportError:
+    from .demographics import GROUP_INFO as GROUPS
 
 # Import constants from hbmpra.py
 # Focused diagnostics for hbmpra_optimized hyperparameters

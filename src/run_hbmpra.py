@@ -761,8 +761,12 @@ def interactive_mode():
         print("  → Standard: Recommended defaults with custom plots")
     
     # Step 2c: Select demographic groups (NEW)
-    from demographics import (GROUP_INFO, GROUP_PRESETS, parse_group_selection, 
-                              get_group_info_filtered, print_group_selection_help)
+    try:
+        from demographics import (GROUP_INFO, GROUP_PRESETS, parse_group_selection, 
+                                 get_group_info_filtered, print_group_selection_help)
+    except ImportError:
+        from .demographics import (GROUP_INFO, GROUP_PRESETS, parse_group_selection,
+                                   get_group_info_filtered, print_group_selection_help)
     
     print("\n" + "="*60)
     print("  DEMOGRAPHIC GROUP SELECTION")

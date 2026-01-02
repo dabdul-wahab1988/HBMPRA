@@ -11,7 +11,7 @@ def test_systemic_mask_from_toxref():
         "As": {"target_organs": ["hepato", "systemic"]},
         "Cd": {"target_organs": ["nephro"]},
     }
-    organ_sets_used, systemic_mask_np, unknown_orgs = build_organ_sets(metals, toxref)
+    organ_sets_used, systemic_mask_np, unknown_orgs, _ = build_organ_sets(metals, toxref)
     # As should be marked systemic (first metal)
     assert systemic_mask_np[0] == 1.0
     # Cd and Cu not systemic

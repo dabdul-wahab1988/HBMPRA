@@ -5,7 +5,8 @@ import yaml
 # Load toxref and construct arrays consistent with script expectations
 loaded = yaml.safe_load(open('external/toxref.yml')) or {}
 tox = loaded.get('tox', {})
-metals = sorted(list(tox.keys()))
+# Only test metals that declare a dermal RfD (skip anions with null dermal data)
+metals = sorted([m for m, meta in tox.items() if meta.get('RfD_derm') is not None])
 
 # Mock C_bio_mgL: one positive entry for each metal to simulate dermal availability
 C_bio_mgL = np.ones((1, len(metals)))  # shape (J=1, M)

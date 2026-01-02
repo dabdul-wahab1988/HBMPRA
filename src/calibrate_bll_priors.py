@@ -17,18 +17,35 @@ except Exception:
     _have_yaml = False
 import shutil
 
-from bll_engines import (
-    OneCompParams,
-    edi_from_conc_ugL,
-    bll_onecomp_from_water,
-    bll_linear_from_intake,
-    classify_population_group,
-    get_group_specific_slope,
-    get_group_specific_onecomp_params,
-    PopulationEngineConfig,
-    compute_bll_auto
-)
-import demographics
+try:
+    from bll_engines import (
+        OneCompParams,
+        edi_from_conc_ugL,
+        bll_onecomp_from_water,
+        bll_linear_from_intake,
+        classify_population_group,
+        get_group_specific_slope,
+        get_group_specific_onecomp_params,
+        PopulationEngineConfig,
+        compute_bll_auto
+    )
+except ImportError:
+    from .bll_engines import (
+        OneCompParams,
+        edi_from_conc_ugL,
+        bll_onecomp_from_water,
+        bll_linear_from_intake,
+        classify_population_group,
+        get_group_specific_slope,
+        get_group_specific_onecomp_params,
+        PopulationEngineConfig,
+        compute_bll_auto
+    )
+
+try:
+    import demographics
+except ImportError:
+    from . import demographics
 
 
 def build_conc_grid(conc_series, n, mode="logspace"):
