@@ -272,12 +272,15 @@ def plot_posterior_panel(ax, idata, var_name, groups, pal, bll_thr=3.5, panel_la
         ax.set_xlim(min(cur_lo, thr_k) - 0.1, max(cur_hi, thr_k) + 0.1)
         ax.axvline(thr_k, color='red', linestyle='--', linewidth=1.2)
         
-        # Nice decade ticks
+        # Force exactly 5 ticks on x-axis for consistent appearance
         cur_lo, cur_hi = ax.get_xlim()
-        kmin = int(np.floor(cur_lo))
-        kmax = int(np.ceil(cur_hi))
-        ax.set_xticks(list(range(kmin, kmax + 1)))
-        ax.set_xticklabels([rf"$10^{{{t}}}$" for t in range(kmin, kmax + 1)])
+        from matplotlib.ticker import MaxNLocator
+        # MaxNLocator(nbins=4) targets 5 ticks (4 intervals)
+        locator = MaxNLocator(nbins=4, steps=[1, 2, 2.5, 5, 10])
+        tick_pos = locator.tick_values(cur_lo, cur_hi)
+        tick_pos = [t for t in tick_pos if cur_lo <= t <= cur_hi]
+        ax.set_xticks(tick_pos)
+        ax.set_xticklabels([rf"$10^{{{round(t, 2):g}}}$" for t in tick_pos])
     except Exception:
         pass
     

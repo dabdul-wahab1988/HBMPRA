@@ -193,16 +193,16 @@ def _kde_on_log10(ax, values, color, label=None, bw_adjust=1.2, fill=False):
 
 # ------------------------ Panels: posterior densities -------------------------
 
-def plot_hi_organs_posterior_4x3(idata, output_dir):
+def plot_hi_organs_posterior(idata, output_dir):
     post = idata.posterior
     groups = list(post.coords["group"].values)
-    vars9 = _discover_organ_hi_vars(idata, max_vars=12)  # Allow up to 12 for 4x3
-    if not vars9:
+    vars_list = _discover_organ_hi_vars(idata, max_vars=12)  # Allow up to 12
+    if not vars_list:
         print("No organ HI variables found; skipping organ HI posterior panel.")
         return
 
     # Dynamically size the grid based on number of variables
-    n_vars = len(vars9)
+    n_vars = len(vars_list)
     n_cols = 3
     n_rows = (n_vars + n_cols - 1) // n_cols  # Ceiling division
     
@@ -214,7 +214,7 @@ def plot_hi_organs_posterior_4x3(idata, output_dir):
     if n_rows == 1:
         axes = axes.reshape(1, -1)
 
-    for idx, var in enumerate(vars9):
+    for idx, var in enumerate(vars_list):
         r, c = divmod(idx, n_cols)
         ax = axes[r][c]
         ax.text(0.02, 0.95, f"({chr(97+idx)})", transform=ax.transAxes, fontsize=14, fontweight="bold", va="top")
@@ -255,13 +255,15 @@ def plot_hi_organs_posterior_4x3(idata, output_dir):
             ax.axvline(thr_k, color="red", linestyle="--", linewidth=1.2)
         except Exception:
             pass
-        # Nice decade ticks
+        # Force exactly 5 ticks on x-axis for consistent appearance
         try:
             cur_lo, cur_hi = ax.get_xlim()
-            kmin = int(np.floor(cur_lo)); kmax = int(np.ceil(cur_hi))
-            xticks = list(range(kmin, kmax + 1))
-            ax.set_xticks(xticks)
-            ax.set_xticklabels([rf"$10^{{{t}}}$" for t in xticks])
+            # MaxNLocator(nbins=4) targets 5 ticks (4 intervals)
+            locator = MaxNLocator(nbins=4, steps=[1, 2, 2.5, 5, 10])
+            tick_pos = locator.tick_values(cur_lo, cur_hi)
+            tick_pos = [t for t in tick_pos if cur_lo <= t <= cur_hi]
+            ax.set_xticks(tick_pos)
+            ax.set_xticklabels([rf"$10^{{{round(t, 2):g}}}$" for t in tick_pos])
         except Exception:
             pass
         lbl = _latex_label(var)
@@ -281,14 +283,14 @@ def plot_hi_organs_posterior_4x3(idata, output_dir):
 
     # Hide unused axes
     total_cells = n_rows * n_cols
-    for k in range(len(vars9), total_cells):
+    for k in range(len(vars_list), total_cells):
         r, c = divmod(k, n_cols); axes[r][c].axis("off")
 
     out = os.path.join(output_dir, "posterior_organs_panel.png")
     fig.savefig(out, dpi=300, bbox_inches="tight"); plt.close(fig)
     print("Saved", out)
 
-def plot_core_posterior_2x2(idata, output_dir, bll_thresholds="3.5,5,10", cr_axis="log"):
+def plot_core_posterior(idata, output_dir, bll_thresholds="3.5,5,10", cr_axis="log"):
     post = idata.posterior
     groups = list(post.coords["group"].values)
     bll_thr = float(str(bll_thresholds).split(",")[0])
@@ -392,24 +394,21 @@ def plot_core_posterior_2x2(idata, output_dir, bll_thresholds="3.5,5,10", cr_axi
                 cur_lo, cur_hi = ax.get_xlim()
                 ax.set_xlim(min(cur_lo, thr_k) - 0.1, max(cur_hi, thr_k) + 0.1)
                 ax.axvline(thr_k, color="red", linestyle="--", linewidth=1.2)
-                # Nice decade ticks
+                # Force exactly 5 ticks on x-axis for consistent appearance
                 cur_lo, cur_hi = ax.get_xlim()
-                # Limit Pb BLL x-axis ticks to ~5 for readability on log10 scale
-                if var == "BLL":
-                    locator = MaxNLocator(nbins=5)
-                    tick_pos = locator.tick_values(cur_lo, cur_hi)
-                    tick_pos = [t for t in tick_pos if cur_lo <= t <= cur_hi]
-                    ax.set_xticks(tick_pos)
-                    ax.set_xticklabels([rf"$10^{{{t:.2g}}}$" for t in tick_pos])
-                else:
-                    kmin = int(np.floor(cur_lo)); kmax = int(np.ceil(cur_hi))
-                    ax.set_xticks(list(range(kmin, kmax + 1)))
-                    ax.set_xticklabels([rf"$10^{{{t}}}$" for t in range(kmin, kmax + 1)])
+                # MaxNLocator(nbins=4) targets 5 ticks (4 intervals)
+                locator = MaxNLocator(nbins=4, steps=[1, 2, 2.5, 5, 10])
+                tick_pos = locator.tick_values(cur_lo, cur_hi)
+                tick_pos = [t for t in tick_pos if cur_lo <= t <= cur_hi]
+                ax.set_xticks(tick_pos)
+                ax.set_xticklabels([rf"$10^{{{round(t, 2):g}}}$" for t in tick_pos])
             except Exception:
                 pass
             ax.set_xlabel(lbl, fontsize=12); ax.set_ylabel("Density (log10 space)", fontsize=12)
         else:
             ax.axvline(thr, color="red", linestyle="--", linewidth=1.2)
+            # Force exactly 5 ticks on x-axis
+            ax.xaxis.set_major_locator(MaxNLocator(nbins=4))
             ax.set_xlabel(lbl, fontsize=12); ax.set_ylabel("Density", fontsize=12)
         
         ax.set_title(f"Posterior {lbl}", fontsize=14)
@@ -427,16 +426,16 @@ def plot_core_posterior_2x2(idata, output_dir, bll_thresholds="3.5,5,10", cr_axi
 
 # ------------------------ Panels: exceedance curves ---------------------------
 
-def plot_hi_organs_exceedance_4x3(idata, output_dir):
+def plot_hi_organs_exceedance(idata, output_dir):
     post = idata.posterior
     groups = list(post.coords["group"].values)
-    vars9 = _discover_organ_hi_vars(idata, max_vars=12)  # Allow up to 12 for 4x3
-    if not vars9:
+    vars_list = _discover_organ_hi_vars(idata, max_vars=12)  # Allow up to 12
+    if not vars_list:
         print("No organ HI variables found; skipping organ HI exceedance panel.")
         return
 
     # Dynamically size the grid based on number of variables
-    n_vars = len(vars9)
+    n_vars = len(vars_list)
     n_cols = 3
     n_rows = (n_vars + n_cols - 1) // n_cols  # Ceiling division
     
@@ -448,7 +447,7 @@ def plot_hi_organs_exceedance_4x3(idata, output_dir):
     if n_rows == 1:
         axes = axes.reshape(1, -1)
 
-    for idx, var in enumerate(vars9):
+    for idx, var in enumerate(vars_list):
         r, c = divmod(idx, n_cols)
         ax = axes[r][c]
         ax.text(0.02, 0.95, f"({chr(97+idx)})", transform=ax.transAxes, fontsize=14, fontweight="bold", va="top")
@@ -503,14 +502,14 @@ def plot_hi_organs_exceedance_4x3(idata, output_dir):
 
     # Hide unused cells
     total_cells = n_rows * n_cols
-    for k in range(len(vars9), total_cells):
+    for k in range(len(vars_list), total_cells):
         r, c = divmod(k, n_cols); axes[r][c].axis("off")
 
     out = os.path.join(output_dir, "exceedance_organs_panel.png")
     fig.savefig(out, dpi=300, bbox_inches="tight"); plt.close(fig)
     print("Saved", out)
 
-def plot_core_exceedance_2x2(idata, output_dir, bll_thresholds="3.5,5,10", cr_axis="log"):
+def plot_core_exceedance(idata, output_dir, bll_thresholds="3.5,5,10", cr_axis="log"):
     post = idata.posterior
     groups = list(post.coords["group"].values)
     bll_thr = float(str(bll_thresholds).split(",")[0])
@@ -631,9 +630,9 @@ def write_single_summary_csv(idata, output_dir, bll_thresholds="3.5,5,10"):
     bll_thr = float(str(bll_thresholds).split(",")[0])
 
     # Collect variables to summarize
-    vars9 = _discover_organ_hi_vars(idata, max_vars=9)
+    selected_vars = _discover_organ_hi_vars(idata, max_vars=12)
     core = [v for v in ["HI_overall","CR_total","BLL"] if v in post]
-    vars_all = vars9 + core
+    vars_all = selected_vars + core
 
     cols = []
     for g in groups:
@@ -715,10 +714,10 @@ def main():
 
     # Generate outputs
     write_single_summary_csv(idata, output_dir, bll_thr)
-    plot_hi_organs_posterior_4x3(idata, output_dir)
-    plot_core_posterior_2x2(idata, output_dir, bll_thr, cr_axis=cr_axis_choice)
-    plot_hi_organs_exceedance_4x3(idata, output_dir)
-    plot_core_exceedance_2x2(idata, output_dir, bll_thr, cr_axis=cr_axis_choice)
+    plot_hi_organs_posterior(idata, output_dir)
+    plot_core_posterior(idata, output_dir, bll_thr, cr_axis=cr_axis_choice)
+    plot_hi_organs_exceedance(idata, output_dir)
+    plot_core_exceedance(idata, output_dir, bll_thr, cr_axis=cr_axis_choice)
 
 if __name__ == "__main__":
     main()

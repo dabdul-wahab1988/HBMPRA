@@ -400,60 +400,42 @@ def generate_t4_risk_ranking(idata, output_dir, df_chem=None, top_n=10):
         print("  [WARN] No site dimension found for risk ranking")
         return None
     
-    # Try to get actual sample IDs from chemistry data
-    site_id_map = {}
+    # Try to get actual sample IDs and geographic coordinates from chemistry data
+    site_info_map = {}
     if df_chem is not None:
-        # Look for ID column in chemistry data
+        # Identify relevant columns
         id_col = None
         for col in ['ID', 'id', 'Sample_ID', 'sample_id', 'SampleID', 'Site', 'site']:
             if col in df_chem.columns:
                 id_col = col
                 break
         
-        if id_col is not None:
-            # Map site index to actual ID
-            sample_ids = df_chem[id_col].tolist()
-            for i, site_idx in enumerate(sites):
-                try:
-                    idx = int(site_idx)
-                    if idx < len(sample_ids):
-                        site_id_map[site_idx] = str(sample_ids[idx])
-                except (ValueError, IndexError):
-                    pass
+        lat_col = None
+        for col in ['lat', 'lon', 'Latitude', 'Longitude', 'Lat', 'Lon']:
+            if col.lower().startswith('lat') and col in df_chem.columns:
+                lat_col = col
+                break
+        
+        lon_col = None
+        for col in ['lat', 'lon', 'Latitude', 'Longitude', 'Lat', 'Lon']:
+            if col.lower().startswith('lon') and col in df_chem.columns:
+                lon_col = col
+                break
+                
+        # Map site index to data
+        for i, site_idx in enumerate(sites):
+            try:
+                idx = int(site_idx)
+                if idx < len(df_chem):
+                    info = {}
+                    if id_col: info['ID'] = str(df_chem.iloc[idx][id_col])
+                    if lat_col: info['Lat'] = df_chem.iloc[idx][lat_col]
+                    if lon_col: info['Lon'] = df_chem.iloc[idx][lon_col]
+                    site_info_map[site_idx] = info
+            except (ValueError, IndexError):
+                pass
     
     records = []
-    
-    # Find risk variables
-    hi_var = None
-    for v in ['HI_overall', 'HI_total']:
-        if v in post.data_vars:
-            hi_var = v
-            break
-    
-    cr_var = None
-    for v in ['CR_total', 'CR_overall', 'TCR']:
-        if v in post.data_vars:
-            cr_var = v
-            break
-    
-    bll_var = 'BLL' if 'BLL' in post.data_vars else None
-    
-    # Find organ-specific HI variables
-    organ_hi_vars = {}
-    organ_names = ['neuro', 'nephro', 'hepato', 'derm', 'gi', 'cardiovascular', 
-                   'endocrine', 'hemato', 'skeletal_dental', 'systemic']
-    for organ in organ_names:
-        var = f'HI_{organ}'
-        if var in post.data_vars:
-            organ_hi_vars[organ] = var
-    
-    if hi_var is None:
-        print("  [WARN] No HI_overall variable found for risk ranking")
-        return None
-    
-    arr_hi = post[hi_var]
-    arr_cr = post[cr_var] if cr_var else None
-    arr_bll = post[bll_var] if bll_var else None
     
     def get_stats(arr, site_i, group_j):
         """Extract statistics for a variable at given site/group."""
@@ -469,93 +451,84 @@ def generate_t4_risk_ranking(idata, output_dir, df_chem=None, top_n=10):
             return {
                 'mean': np.mean(vals),
                 'median': np.median(vals),
+                'p03': np.percentile(vals, 3),
                 'p97': np.percentile(vals, 97),
             }
         except Exception:
             return None
+
+    # Find risk variables
+    hi_var = next((v for v in ['HI_overall', 'HI_total'] if v in post.data_vars), None)
+    cr_var = next((v for v in ['CR_total', 'CR_overall', 'TCR'] if v in post.data_vars), None)
+    bll_var = 'BLL' if 'BLL' in post.data_vars else None
     
-    for i, site in enumerate(sites):
+    organ_hi_vars = {o: f'HI_{o}' for o in ['neuro', 'nephro', 'hepato', 'derm', 'gi', 
+                                          'cardiovascular', 'endocrine', 'hemato', 
+                                          'skeletal_dental', 'systemic'] if f'HI_{o}' in post.data_vars}
+            
+    if hi_var is None:
+        return None
+
+    arr_hi = post[hi_var]
+    arr_cr = post[cr_var] if cr_var else None
+    arr_bll = post[bll_var] if bll_var else None
+
+    for i, _ in enumerate(sites):
+        site_key = sites[i]
         for j, grp in enumerate(groups):
-            # Get HI stats
             hi_stats = get_stats(arr_hi, i, j)
-            if hi_stats is None:
-                continue
+            if hi_stats is None: continue
             
-            # Use mapped sample ID if available
-            site_label = site_id_map.get(site, site)
-            
+            site_info = site_info_map.get(site_key, {})
             record = {
-                'Site': site_label,
+                'Site': site_info.get('ID', site_key),
                 'Demographic': grp,
+                'Lat': site_info.get('Lat'),
+                'Lon': site_info.get('Lon'),
                 'HI_Mean': hi_stats['mean'],
                 'HI_Median': hi_stats['median'],
+                'HI_3%': hi_stats['p03'],
                 'HI_97%': hi_stats['p97'],
-                'P(HI>1)': None,  # Will compute below
+                'P(HI>1)': None,
             }
             
-            # Compute P(HI>1)
+            # P(HI>1)
             try:
-                if 'group' in arr_hi.dims:
-                    sub = arr_hi.isel(site=i, group=j)
-                else:
-                    sub = arr_hi.isel(site=i)
+                sub = arr_hi.isel(site=i, group=j) if 'group' in arr_hi.dims else arr_hi.isel(site=i)
                 vals = sub.values.flatten()
-                vals = vals[np.isfinite(vals)]
-                record['P(HI>1)'] = (vals > 1.0).mean()
-            except:
-                pass
+                record['P(HI>1)'] = (vals[np.isfinite(vals)] > 1.0).mean()
+            except: pass
             
-            # Get CR stats if available
             if arr_cr is not None:
                 cr_stats = get_stats(arr_cr, i, j)
                 if cr_stats:
                     record['CR_Mean'] = cr_stats['mean']
-                    record['CR_Median'] = cr_stats['median']
+                    record['CR_3%'] = cr_stats['p03']
                     record['CR_97%'] = cr_stats['p97']
-                    # Compute P(CR > 1e-6)
                     try:
-                        if 'group' in arr_cr.dims:
-                            sub = arr_cr.isel(site=i, group=j)
-                        else:
-                            sub = arr_cr.isel(site=i)
-                        vals = sub.values.flatten()
-                        vals = vals[np.isfinite(vals)]
-                        record['P(CR>1e-6)'] = (vals > 1e-6).mean()
-                    except:
-                        pass
+                        sub = arr_cr.isel(site=i, group=j) if 'group' in arr_cr.dims else arr_cr.isel(site=i)
+                        record['P(CR>1e-6)'] = (sub.values[np.isfinite(sub.values)] > 1e-6).mean()
+                    except: pass
             
-            # Get BLL stats if available
             if arr_bll is not None:
                 bll_stats = get_stats(arr_bll, i, j)
                 if bll_stats:
                     record['BLL_Mean'] = bll_stats['mean']
-                    record['BLL_Median'] = bll_stats['median']
+                    record['BLL_3%'] = bll_stats['p03']
                     record['BLL_97%'] = bll_stats['p97']
-                    # Compute P(BLL > 3.5) for children, 5.0 for others
                     thr = 3.5 if grp in ['Children', 'Pregnant'] else 5.0
                     try:
-                        if 'group' in arr_bll.dims:
-                            sub = arr_bll.isel(site=i, group=j)
-                        else:
-                            sub = arr_bll.isel(site=i)
-                        vals = sub.values.flatten()
-                        vals = vals[np.isfinite(vals)]
-                        record[f'P(BLL>{thr})'] = (vals > thr).mean()
-                    except:
-                        pass
+                        sub = arr_bll.isel(site=i, group=j) if 'group' in arr_bll.dims else arr_bll.isel(site=i)
+                        record[f'P(BLL>{thr})'] = (sub.values[np.isfinite(sub.values)] > thr).mean()
+                    except: pass
             
-            # Get dominant organ HI (organ with highest mean)
             if organ_hi_vars:
-                max_organ = None
-                max_hi = 0
+                max_organ, max_hi = None, 0
                 for organ, var in organ_hi_vars.items():
-                    organ_stats = get_stats(post[var], i, j)
-                    if organ_stats and organ_stats['mean'] > max_hi:
-                        max_hi = organ_stats['mean']
-                        max_organ = organ
-                if max_organ:
-                    record['Dominant_Organ'] = max_organ
-                    record['Dominant_Organ_HI'] = max_hi
+                    o_stats = get_stats(post[var], i, j)
+                    if o_stats and o_stats['mean'] > max_hi:
+                        max_hi, max_organ = o_stats['mean'], organ
+                if max_organ: record['Dominant_Organ'], record['Dominant_Organ_HI'] = max_organ, max_hi
             
             records.append(record)
     
@@ -712,18 +685,32 @@ def generate_pca_analysis(df_chem, output_dir):
         print("  [WARN] Not enough variables for PCA")
         return None
     
-    df_numeric = df_chem[numeric_cols].apply(pd.to_numeric, errors='coerce').dropna()
+    df_numeric = df_chem[numeric_cols].apply(pd.to_numeric, errors='coerce')
     
-    if len(df_numeric) < 10:
-        print("  [WARN] Not enough samples for PCA")
+    # Logic: Drop columns that are entirely NaN, then impute remaining NaNs with median
+    df_numeric = df_numeric.dropna(axis=1, how='all')
+    if df_numeric.empty:
         return None
+    
+    # Fill missing values with median for PCA robustness
+    df_numeric = df_numeric.fillna(df_numeric.median())
+    df_numeric = df_numeric.fillna(0) # Final fallback
+    
+    if len(df_numeric) < 5:
+        print("  [WARN] Not enough samples for PCA after cleaning")
+        return None
+    
+    # Update numeric_cols to reflect surviving columns
+    numeric_cols = df_numeric.columns.tolist()
     
     # Log transform (for metals which are typically log-normal)
     df_log = np.log1p(df_numeric)
+    df_log = df_log.fillna(0) # Safety after log
     
     # Standardize
     scaler = StandardScaler()
     df_scaled = pd.DataFrame(scaler.fit_transform(df_log), columns=numeric_cols)
+    df_scaled = df_scaled.fillna(0) # Final safety for PCA
     
     # KMO and Bartlett's test
     if has_factor_analyzer:
@@ -754,8 +741,8 @@ def generate_pca_analysis(df_chem, output_dir):
     cumulative_var = np.cumsum(explained_var)
     
     # Select components with eigenvalue > 1 (Kaiser criterion)
-    n_components = sum(eigenvalues > 1)
-    n_components = max(2, min(n_components, len(numeric_cols) - 1))
+    n_components = sum(eigenvalues > 0.99) # Be slightly more inclusive for small sets
+    n_components = max(2, min(n_components, len(numeric_cols)))
     
     loadings = pca.components_[:n_components].T  # shape: (n_features, n_components)
     

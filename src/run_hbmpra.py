@@ -645,695 +645,409 @@ def validate_chemistry_file(filepath):
     return True, info
 
 
-def interactive_mode():
-    """Run in interactive mode with user prompts."""
-    print_banner()
+
+class SessionContext:
+    """Class to maintain session state for the interactive hub."""
+    def __init__(self):
+        self.input_file = None
+        self.output_dir = None
+        self.concentration_unit = 'µg/L'
+        self.selected_groups = []
+        self.idata_info = None  # Validates if risk results exist
+        self.is_anion_only = False
+        self.has_lead = False
+
+    def update_info(self, info):
+        self.is_anion_only = not info.get('metals') and info.get('anions')
+        self.has_lead = 'Pb' in info.get('metals', [])
+        self.metals = info.get('metals', [])
+        self.anions = info.get('anions', [])
+
+
+def configure_session(default_file=None):
+    """Initial session configuration: file, units, output directory."""
+    ctx = SessionContext()
     
-    TOTAL_STEPS = 11
-    
-    # Step 1: Check dependencies
-    print_step(1, TOTAL_STEPS, "Checking system requirements")
-    if not check_dependencies():
-        print("\nPlease install missing packages and try again.")
-        return 1
-    
-    # Step 2: Find and select data file
-    print_step(2, TOTAL_STEPS, "Select input data file")
-    
-    data_files = find_data_files()
-    
-    if not data_files:
-        print("No CSV data files found in current directory.")
-        filepath = input("Enter path to your chemistry CSV file: ").strip()
-        if not filepath:
-            print("No file provided. Exiting.")
-            return 1
-    elif len(data_files) == 1:
-        filepath = str(data_files[0])
-        print(f"Found data file: {filepath}")
-        use_it = input("Use this file? [Y/n]: ").strip().lower()
-        if use_it == 'n':
-            filepath = input("Enter path to your chemistry CSV file: ").strip()
+    # Select input file
+    if default_file and os.path.exists(default_file):
+        filepath = default_file
     else:
-        print("Found multiple data files:")
-        for i, f in enumerate(data_files, 1):
-            print(f"  {i}. {f.name}")
-        
-        choice = input(f"Select file [1-{len(data_files)}] or enter path: ").strip()
-        try:
-            idx = int(choice) - 1
-            filepath = str(data_files[idx])
-        except (ValueError, IndexError):
-            filepath = choice
-    
-    # Validate the file
+        data_files = find_data_files()
+        if not data_files:
+            filepath = input("Enter path to your chemistry CSV file: ").strip()
+        elif len(data_files) == 1:
+            filepath = str(data_files[0])
+            print(f"Found data file: {filepath}")
+            if input("Use this file? [Y/n]: ").strip().lower() == 'n':
+                filepath = input("Enter path to your chemistry CSV file: ").strip()
+        else:
+            print("Found multiple data files:")
+            for i, f in enumerate(data_files, 1):
+                print(f"  {i}. {f.name}")
+            choice = input(f"Select file [1-{len(data_files)}] or enter path: ").strip()
+            try:
+                idx = int(choice) - 1
+                filepath = str(data_files[idx])
+            except (ValueError, IndexError):
+                filepath = choice
+
+    if not filepath or not os.path.exists(filepath):
+        print(f"  [ERROR] File not found: {filepath}")
+        return None
+
+    # Validate file
     valid, info = validate_chemistry_file(filepath)
     if not valid:
-        print(f"\n[WARN] Error: {info}")
-        return 1
+        print(f"  [ERROR] {info}")
+        return None
     
-    print(f"\n[OK] Valid chemistry file:")
-    print(f"  ✓ {info['rows']} samples/sites detected")
-    if info['metals']:
-        print(f"  ✓ Metals: {', '.join(info['metals'])} ({len(info['metals'])} total)")
-    else:
-        print(f"  ○ No metals detected")
+    ctx.input_file = filepath
+    ctx.update_info(info)
     
-    # Display anion info (NEW)
-    if info.get('anions'):
-        anion_display = []
-        for anion in info['anions']:
-            if anion == 'nitrate' and 'nitrate' in info.get('anion_info', {}):
-                basis = info['anion_info']['nitrate'].get('basis', 'NO3')
-                anion_display.append(f"NO₃ ({basis} basis)")
-            else:
-                anion_display.append('F⁻' if anion == 'fluoride' else anion)
-        print(f"  ✓ Anions: {', '.join(anion_display)} ({len(info['anions'])} total)")
-        
-        # Show conversion note for nitrate
-        if 'nitrate' in info['anions'] and 'nitrate' in info.get('anion_info', {}):
-            nitrate_basis = info['anion_info']['nitrate'].get('basis', 'NO3')
-            if nitrate_basis == 'NO3':
-                print(f"    ⚠ NO₃ will be converted to NO₃–N basis for HQ calculation")
-    else:
-        print(f"  ○ No anions (F, NO₃) detected")
+    # Print status
+    print(f"\n[OK] Valid chemistry file: {os.path.basename(filepath)}")
+    print(f"  ✓ {info['rows']} samples detected")
+    if info['metals']: print(f"  ✓ Metals: {', '.join(info['metals'])}")
+    if info['anions']: print(f"  ✓ Anions: {', '.join(info['anions'])}")
+
+    # Units selection
+    print("\nSelect concentration units:")
+    print("  1. µg/L (default)  2. mg/L (ppm)")
+    u_choice = input("Choice [1/2, default=1]: ").strip()
+    ctx.concentration_unit = 'mg/L' if u_choice == '2' else 'µg/L'
     
-    print(f"  {'✓' if info['has_pH'] else '○'} pH data: {'available' if info['has_pH'] else 'not found (will use default pH=7.0)'}")
-    print(f"  {'✓' if info['has_Eh'] else '○'} Eh data: {'available' if info['has_Eh'] else 'not found (will use default Eh=300mV)'}")
-    
-    # Step 2b: Select workflow preset (NEW)
-    print("\n" + "="*50)
-    print("  SELECT ANALYSIS MODE")
-    print("="*50)
-    print("  1. Quick Scan    - Fast screening (1000 draws, tables only)")
-    print("  2. Standard      - Full analysis with custom plots [RECOMMENDED]")
-    print("  3. Publication   - High-quality (4000 draws + sensitivity/entropy)")
-    print("  4. Custom        - Configure each setting manually")
-    preset_choice = input("\n  Select mode [1-4, default=2]: ").strip()
-    
-    if preset_choice == '1':
-        preset = 'quick'
-        mcmc_draws = 1000
-        run_advanced = False
-        skip_figures = True  # Skip figures for quick testing
-        print("  → Quick Scan: Fast results, no plots")
-    elif preset_choice == '3':
-        preset = 'publication'
-        mcmc_draws = 4000
-        run_advanced = True  # Auto-run sensitivity & entropy
-        skip_figures = False
-        print("  → Publication: High-quality + all advanced analyses")
-    elif preset_choice == '4':
-        preset = 'custom'
-        run_advanced = None  # Will be prompted
-        skip_figures = None  # Will be prompted
-        print("  → Custom: You'll configure every setting")
-        
-        # Prompt for draws in Custom mode
-        print("\n  Configure MCMC sampling:")
-        print("    Draws determine accuracy vs speed tradeoff")
-        print("    1000 = fast (~5 min), 2000 = standard (~10 min), 4000 = publication (~20 min)")
-        draws_input = input("  Number of draws [default=2000]: ").strip()
-        try:
-            mcmc_draws = int(draws_input) if draws_input else 2000
-            if mcmc_draws < 500:
-                print(f"  [WARN] {mcmc_draws} is very low, using 500 minimum")
-                mcmc_draws = 500
-        except ValueError:
-            mcmc_draws = 2000
-        print(f"  → Using {mcmc_draws} draws")
-    else:
-        preset = 'standard'
-        mcmc_draws = 2000
-        run_advanced = False
-        skip_figures = False
-        print("  → Standard: Recommended defaults with custom plots")
-    
-    # Step 2c: Select demographic groups (NEW)
-    try:
-        from demographics import (GROUP_INFO, GROUP_PRESETS, parse_group_selection, 
-                                 get_group_info_filtered, print_group_selection_help)
-    except ImportError:
-        from .demographics import (GROUP_INFO, GROUP_PRESETS, parse_group_selection,
-                                   get_group_info_filtered, print_group_selection_help)
-    
-    print("\n" + "="*60)
-    print("  DEMOGRAPHIC GROUP SELECTION")
-    print("="*60)
-    print("\n  Available groups:")
-    for i, (name, info_d) in enumerate(GROUP_INFO.items(), 1):
-        bw = info_d['BW']
-        ir = info_d['IR']
-        ed_years = info_d['ED'] / 365
-        print(f"    {i}. {name:10} (BW={bw}kg, IR={ir}L/d, {ed_years:.0f}y exposure)")
-    
-    print("\n  Presets:")
-    print("    all           → Adults, Children, Teens, Pregnant [default]")
-    print("    sensitive     → Children, Pregnant (vulnerable populations)")
-    print("    non_sensitive → Adults, Teens")
-    print("    adults_only   → Adults only")
-    print("    children_only → Children only")
-    
-    group_selection = input("\n  Select groups [numbers, names, or preset]: ").strip()
-    if not group_selection:
-        group_selection = 'all'
-    
-    try:
-        selected_groups = parse_group_selection(group_selection)
-        print(f"  → Analyzing: {', '.join(selected_groups)}")
-    except ValueError as e:
-        print(f"  [WARN] {e}")
-        print("  → Using all groups as fallback")
-        selected_groups = list(GROUP_INFO.keys())
-    print("="*60)
-    
-    # Step 3: Specify concentration units
-    print("\n  Concentration units in your data:")
-    print("    1. µg/L (micrograms per liter) - default")
-    print("    2. mg/L (milligrams per liter)")
-    print("    3. ppb (parts per billion, same as µg/L)")
-    print("    4. ppm (parts per million, same as mg/L)")
-    unit_choice = input("  Select units [1-4, default=1]: ").strip()
-    
-    if unit_choice == '2' or unit_choice.lower() == 'mg/l' or unit_choice == '4' or unit_choice.lower() == 'ppm':
-        concentration_unit = 'mg/L'
-        print(f"  → Using mg/L (data will be converted to µg/L internally: multiply by 1000)")
-    else:
-        concentration_unit = 'µg/L'
-        print(f"  → Using µg/L (standard unit, no conversion needed)")
-    
-    # Step 3: Configure output
-    print_step(3, TOTAL_STEPS, "Configure output directory")
-    
+    # Output directory - explicitly save in project root (outside src/)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    default_output = f"results_{Path(filepath).stem}_{timestamp}"
+    default_out = f"results_{Path(filepath).stem}_{timestamp}"
+    out_dir_input = input(f"Output directory [{default_out}]: ").strip()
+    final_out = out_dir_input if out_dir_input else default_out
     
-    output_dir = input(f"Output directory [{default_output}]: ").strip()
-    if not output_dir:
-        output_dir = default_output
+    # Force output to be in project root if relative path
+    if not os.path.isabs(final_out):
+        ctx.output_dir = os.path.abspath(os.path.join(PROJECT_ROOT, final_out))
+    else:
+        ctx.output_dir = final_out
+        
+    os.makedirs(ctx.output_dir, exist_ok=True)
     
-    # Step 4: Run speciation (optional)
-    print_step(4, TOTAL_STEPS, "Thermodynamic speciation modeling")
-    
+    # Demographic selection
     try:
-        import phreeqpython
-        has_phreeqc = True
+        from demographics import GROUP_INFO, parse_group_selection
+        print("\nDemographic groups: (all, sensitive, non_sensitive, adults_only, children_only)")
+        g_sel = input("Select groups [default=all]: ").strip()
+        ctx.selected_groups = parse_group_selection(g_sel if g_sel else 'all')
     except ImportError:
-        has_phreeqc = False
+        ctx.selected_groups = ["Adults", "Children", "Teens", "Pregnant"]
+
+    return ctx
+
+
+def run_risk_assessment_workflow(ctx):
+    """Workflow: Speciation -> BLL Calibration -> Bayesian Model."""
+    print_step(1, 4, "Starting Risk Assessment Workflow")
     
-    # Determine if this is an anion-only analysis (no metals)
-    is_anion_only = not info.get('metals') and info.get('anions')
-    has_lead = 'Pb' in info.get('metals', [])
+    # 1. Speciation
+    run_spec = False
+    if not ctx.is_anion_only:
+        choice = input("Run PHREEQC speciation? (Highly Recommended) [Y/n]: ").strip().lower()
+        if choice != 'n':
+            print("  Running speciation...")
+            spec_cmd = [sys.executable, os.path.join(SCRIPT_DIR, "speciation_modeling.py"),
+                       "--input", ctx.input_file, "--output-dir", ctx.output_dir, "--use-total-fallback"]
+            if ctx.concentration_unit == 'mg/L': spec_cmd.extend(["--input-units", "mg/L"])
+            import subprocess
+            subprocess.run(spec_cmd)
+            run_spec = True
+
+    # 2. BLL Calibration
+    if not ctx.is_anion_only and ctx.has_lead:
+        print_step(2, 4, "BLL Calibration")
+        run_bll_calibration(ctx.input_file, ctx.output_dir, ctx.concentration_unit)
+
+    # 3. Hamiltonian Monte Carlo
+    print_step(3, 4, "Bayesian Model Sampling")
+    print("  Configure MCMC: 1000 (Quick), 2000 (Standard), 4000 (Publication)")
+    d_input = input("  Draws [default=2000]: ").strip()
+    mcmc_draws = int(d_input) if d_input else 2000
     
-    if is_anion_only:
-        print("\n" + "="*50)
-        print("  ANION-ONLY ANALYSIS MODE")
-        print("="*50)
-        print("  Your data contains only anions (F, NO₃), no metals.")
-        print("  The following will be adjusted:")
-        print("    • Speciation modeling: SKIPPED (not applicable)")
-        print("    • BLL calibration: SKIPPED (no lead data)")
-        print("    • Cancer risk: SKIPPED (anions are not carcinogens)")
-        print("    • Hazard Index: COMPUTED for F and NO₃")
-        print("="*50)
-    
-    run_speciation = False
-    if not is_anion_only and has_phreeqc:
-        print("PHREEQC is available for thermodynamic speciation modeling.")
-        print("This calculates bioavailable metal species (recommended for accuracy).")
-        choice = input("Run speciation modeling? [Y/n]: ").strip().lower()
-        run_speciation = choice != 'n'
-    elif is_anion_only:
-        print("  [SKIP] Speciation modeling (not applicable for anions)")
-    else:
-        print("PHREEQC not available. Using simplified speciation estimates.")
-        print("(Install phreeqpython for full thermodynamic modeling)")
-    
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Run speciation if requested
-    if run_speciation:
-        print("\nRunning PHREEQC speciation modeling...")
-        speciation_cmd = [
-            sys.executable, os.path.join(SCRIPT_DIR, "speciation_modeling.py"),
-            "--input", filepath,
-            "--output-dir", output_dir,
-            "--use-total-fallback"
-        ]
-        # Add unit conversion flag if needed
-        if concentration_unit == 'mg/L':
-            speciation_cmd.extend(["--input-units", "mg/L"])
-        
-        import subprocess
-        result = subprocess.run(speciation_cmd, capture_output=True, text=True)
-        
-        if result.returncode != 0:
-            print(f"[WARN] Speciation modeling had issues:")
-            print(result.stderr[-500:] if result.stderr else "Unknown error")
-            print("Continuing with simplified speciation...")
-        else:
-            print("[OK] Speciation modeling complete")
-    
-    # Step 5: Run BLL calibration (skip for anion-only)
-    print_step(5, TOTAL_STEPS, "BLL (Blood Lead Level) prior calibration")
-    if is_anion_only or not has_lead:
-        if is_anion_only:
-            print("  [SKIP] BLL calibration (anion-only analysis, no lead data)")
-        else:
-            print("  [SKIP] BLL calibration (no lead (Pb) detected in data)")
-    else:
-        run_bll_calibration(filepath, output_dir, concentration_unit)
-    
-    # Step 6: Run the main analysis
-    print_step(6, TOTAL_STEPS, "Running Bayesian risk assessment")
-    
-    # Run main HBMPRA model
-    print("\nRunning Bayesian risk assessment model...")
-    print("(This may take 5-15 minutes depending on your computer)")
-    print(f"Concentration units: {concentration_unit}")
-    
-    hbmpra_cmd = [
-        sys.executable, os.path.join(SCRIPT_DIR, "hbmpra_optimized.py"),
-        "--chemistry", filepath,
-        "--results-dir", output_dir,
-        "--draws", str(mcmc_draws),  # Based on preset selection
-        "--tune", str(mcmc_draws),
-        "--groups", ",".join(selected_groups),  # Pass selected groups
-        "--use-bioavailable",
-        "--allow-default-organ-sets",
-        "--allow-disable-dermal-if-no-bio"
-    ]
-    # Add unit conversion flag if needed
-    if concentration_unit == 'mg/L':
-        hbmpra_cmd.extend(["--input-units", "mg/L"])
+    hbmp_cmd = [sys.executable, os.path.join(SCRIPT_DIR, "hbmpra_optimized.py"),
+               "--chemistry", ctx.input_file, "--results-dir", ctx.output_dir,
+               "--draws", str(mcmc_draws), "--tune", str(mcmc_draws),
+               "--groups", ",".join(ctx.selected_groups), "--use-bioavailable"]
+    if ctx.concentration_unit == 'mg/L': hbmp_cmd.extend(["--input-units", "mg/L"])
     
     import subprocess
-    result = subprocess.run(hbmpra_cmd)
+    result = subprocess.run(hbmp_cmd)
     
-    if result.returncode != 0:
-        print(f"\n[WARN] Analysis encountered errors. Check the output above.")
-        return 1
-    
-    # Quick Results Preview (always shown)
-    print("\n" + "="*50)
-    print("  QUICK RESULTS PREVIEW")
-    print("="*50)
-    try:
-        import arviz as az
-        trace_file = os.path.join(output_dir, "trace.nc")
-        if os.path.exists(trace_file):
-            idata = az.from_netcdf(trace_file)
-            post = idata.posterior
-            
-            # Show HI summary
-            if "HI_overall" in post:
-                hi_mean = float(post["HI_overall"].mean())
-                hi_max = float(post["HI_overall"].max())
-                print(f"  HI_overall:  mean={hi_mean:.3f}, max={hi_max:.3f}")
-                if hi_mean > 1:
-                    print(f"    ⚠ WARNING: Mean HI > 1 indicates potential health risk!")
-            
-            # Show CR summary if available
-            if "CR_total" in post:
-                cr_mean = float(post["CR_total"].mean())
-                print(f"  CR_total:    mean={cr_mean:.2e}")
-                if cr_mean > 1e-4:
-                    print(f"    ⚠ WARNING: CR > 10⁻⁴ indicates elevated cancer risk")
-            
-            # Show BLL summary if available
-            if "BLL" in post:
-                bll_mean = float(post["BLL"].mean())
-                print(f"  BLL:         mean={bll_mean:.2f} µg/dL")
-                if bll_mean > 3.5:
-                    print(f"    ⚠ WARNING: BLL > 3.5 µg/dL exceeds CDC reference value")
-        else:
-            print("  [WARN] Could not load results for preview")
-    except Exception as e:
-        print(f"  [WARN] Could not generate preview: {e}")
-    print("="*50)
-    
-    # Determine whether to generate figures (diagnostics vs results independently)
-    if skip_figures is None:  # Custom mode: ask separately
-        diag_choice = input("\nGenerate diagnostic plots? [y/N]: ").strip().lower()
-        result_choice = input("Generate result plots? [y/N]: ").strip().lower()
-        generate_diag = diag_choice == 'y'
-        generate_results = result_choice == 'y'
+    if result.returncode == 0:
+        print("\n[OK] Risk Assessment Complete.")
+        # Show mini preview
+        try:
+            import arviz as az
+            trace_path = os.path.join(ctx.output_dir, "trace.nc")
+            if os.path.exists(trace_path):
+                idata = az.from_netcdf(trace_path)
+                post = idata.posterior
+                if "HI_overall" in post:
+                    print(f"  → Mean Overall HI: {float(post['HI_overall'].mean()):.3f}")
+        except Exception: pass
     else:
-        generate_diag = not skip_figures
-        generate_results = not skip_figures
+        print("\n[ERROR] Risk Assessment failed.")
+
+
+def run_sensitivity_workflow(ctx):
+    """Prompt for config and run sensitivity analysis."""
+    print_step(1, 1, "Sensitivity Analysis")
+    print("Select method: 1. sobol (best), 2. morris (fast), 3. delta")
+    m_choice = input("Choice [1/2/3, default=1]: ").strip()
+    method = 'morris' if m_choice == '2' else 'delta' if m_choice == '3' else 'sobol'
     
-    # Step 7: Custom Diagnostic Plots
-    print_step(7, TOTAL_STEPS, "Diagnostic plots")
-    if generate_diag:
-        from plot_diagnostics_panel import interactive_diagnostic_builder
-        trace_file = os.path.join(output_dir, "trace.nc")
-        model_file = os.path.join(output_dir, "model.pkl")
-        diag_figs = interactive_diagnostic_builder(trace_file, model_file, output_dir)
-    else:
-        print("  [SKIP] Skipping diagnostic plots (user choice/preset)")
+    s_choice = input("Number of samples [default=512]: ").strip()
+    n_samples = int(s_choice) if s_choice else 512
     
-    # Step 8: Custom Result Plots
-    print_step(8, TOTAL_STEPS, "Result plots")
-    if generate_results:
-        from plot_panel import interactive_plot_builder
-        import arviz as az
+    run_sensitivity_analysis(ctx.input_file, ctx.output_dir, method=method, n_samples=n_samples, input_units=ctx.concentration_unit)
+
+
+def run_indices_workflow(ctx):
+    """Prompt for config and run HPI/PERI indices analysis."""
+    print_step(1, 1, "Entropy-based Pollution Indices")
+    
+    # Check for standards and toxicity files
+    standards_file = None
+    toxicities_file = None
+    
+    # Try to find in waterdata folder first, then project root
+    for base_dir in [WATERDATA_DIR, PROJECT_ROOT]:
+        std_path = os.path.join(base_dir, "standards.csv")
+        tox_path = os.path.join(base_dir, "toxicity.csv")
         
-        trace_file = os.path.join(output_dir, "trace.nc")
-        if os.path.exists(trace_file):
-            try:
-                idata = az.from_netcdf(trace_file)
+        if os.path.exists(std_path) and standards_file is None:
+            standards_file = std_path
+        if os.path.exists(tox_path) and toxicities_file is None:
+            toxicities_file = tox_path
+    
+    if not standards_file or not os.path.exists(standards_file):
+        print("  [INFO] standards.csv not found in default locations.")
+        standards_file = input("  Enter path to standards.csv: ").strip()
+    
+    if not toxicities_file or not os.path.exists(toxicities_file):
+        print("  [INFO] toxicity.csv not found in default locations.")
+        toxicities_file = input("  Enter path to toxicity.csv: ").strip()
+    
+    if not os.path.exists(standards_file) or not os.path.exists(toxicities_file):
+        print("  [ERROR] Required files for Entropy analysis are missing. Skipping.")
+        return
+
+    b_choice = input("Bootstrap samples [default=1000]: ").strip()
+    n_bootstrap = int(b_choice) if b_choice else 1000
+    
+    run_entropy_hpi_peri(ctx.input_file, ctx.output_dir, 
+                         standards_file=standards_file, 
+                         toxicities_file=toxicities_file,
+                         bootstrap_samples=n_bootstrap, 
+                         input_units=ctx.concentration_unit)
+
+
+def check_hbmpra_results(ctx):
+    """Verify if HBMPRA results exist in the output directory."""
+    trace_path = os.path.join(ctx.output_dir, "trace.nc")
+    if not os.path.exists(trace_path):
+        print(f"\n[WARN] Model results (trace.nc) not found in: {ctx.output_dir}")
+        print("Please run HBMPRA Risk Assessment first (Option 1).")
+        return False
+    return True
+
+
+def interactive_mode():
+    """Main Menu Hub for Interactive HBMPRA Analysis."""
+    print_banner()
+    if not check_dependencies(): return 1
+    
+    ctx = configure_session()
+    if not ctx: return 1
+
+    while True:
+        print("\n" + "="*60)
+        print("           HBMPRA INTERACTIVE HUB")
+        print("="*60)
+        print(f" [ CONFIGURATION ]")
+        print(f"   Input File:   {os.path.basename(ctx.input_file)}")
+        print(f"   Output Dir:   {ctx.output_dir}/")
+        print(f"   Units:        {ctx.concentration_unit}")
+        print(f"   Groups:       {', '.join(ctx.selected_groups)}")
+        print("-" * 60)
+        print(" [ 1. RUN ANALYSES ]")
+        print("   1. Risk Assessment (Full Workflow)")
+        print("   2. Sensitivity Analysis (Sobol/Morris Calculation)")
+        print("   3. Pollution Indices (Entropy HPI/PERI Calculation)")
+        print("-" * 60)
+        print(" [ 2. HBMPRA POST-ANALYSIS ]")
+        print("   4. Standard Result Figures (Posteriors/Exceedance)")
+        print("   5. Interactive Custom Plot Builder")
+        print("   6. HBMPRA Diagnostic Plots (Trace/Convergence)")
+        print("   7. HBMPRA Summary Tables (Stats/PCA)")
+        print("-" * 60)
+        print(" [ 3. SENSITIVITY POST-ANALYSIS ]")
+        print("   8. Sensitivity Visualization & Tables")
+        print("-" * 60)
+        print(" [ 4. POLLUTION INDICES POST-ANALYSIS ]")
+        print("   9. Pollution Indices Visualization & Tables")
+        print("-" * 60)
+        print(" [ 5. SYSTEM ]")
+        print("   10. Change Configuration (File/Output/Units)")
+        print("   0. Exit")
+        print("="*60)
+        
+        choice = input("\nSelect choice: ").strip()
+        
+        if choice == '0':
+            print("Exiting HBMPRA Hub. Goodbye!")
+            break
+            
+        elif choice == '1':
+            run_risk_assessment_workflow(ctx)
+            
+        elif choice == '2':
+            run_sensitivity_workflow(ctx)
+            
+        elif choice == '3':
+            run_indices_workflow(ctx)
+            
+        elif choice == '4':
+            if check_hbmpra_results(ctx):
+                run_plot_results(ctx.output_dir)
                 
-                # Get BLL thresholds from RUNLOG if available
-                runlog_path = os.path.join(output_dir, "RUNLOG.json")
-                bll_thresholds = "3.5,5,10"
-                if os.path.exists(runlog_path):
-                    import json
-                    with open(runlog_path) as f:
-                        runlog = json.load(f)
-                    bll_list = runlog.get("bll_thresholds", [3.5, 5, 10])
-                    bll_thresholds = ",".join(str(x) for x in bll_list)
-                
-                result_figs = interactive_plot_builder(idata, output_dir, bll_thresholds)
+        elif choice == '5':
+            if check_hbmpra_results(ctx):
+                try:
+                    import arviz as az
+                    from plot_panel import interactive_plot_builder
+                    idata = az.from_netcdf(os.path.join(ctx.output_dir, "trace.nc"))
+                    interactive_plot_builder(idata, ctx.output_dir)
+                except Exception as e:
+                    print(f"  [ERROR] Plot builder failed: {e}")
                     
-            except Exception as e:
-                print(f"  [WARN] Could not load trace for result plots: {e}")
-                result_figs = 0
-        else:
-            print(f"  [WARN] Trace file not found: {trace_file}")
-            result_figs = 0
-    else:
-        print("  [SKIP] Skipping result plots (user choice/preset)")
-    
-    # Step 9: Generate summary tables
-    print_step(9, TOTAL_STEPS, "Generating summary tables")
-    run_summary_tables(output_dir, filepath)
-    
-    # Step 10: Sensitivity Analysis (Optional, Advanced)
-    print_step(10, TOTAL_STEPS, "Sensitivity Analysis (optional, advanced)")
-    print("Sensitivity analysis evaluates how input parameters affect model outputs.")
-    print("Methods available: Sobol (variance-based), Morris (screening), Delta (moment)")
-    
-    # Use preset-based decision or prompt user
-    if run_advanced is True:
-        print("  [AUTO] Running sensitivity analysis (Publication mode)")
-        run_sens_choice = 'y'
-    elif run_advanced is False:
-        print("  [SKIP] Skipping sensitivity analysis (Use Publication or Custom mode to enable)")
-        run_sens_choice = 'n'
-    else:  # Custom mode
-        print("NOTE: This can take 10-30+ minutes depending on sample size.")
-        run_sens_choice = input("Run sensitivity analysis? [y/N]: ").strip().lower()
-    
-    if run_sens_choice == 'y':
-        print("\nSelect sensitivity method:")
-        print("  1. sobol  - Sobol indices (most thorough, slowest)")
-        print("  2. morris - Morris method (faster screening)")
-        print("  3. delta  - Delta moment (distribution-based)")
-        method_choice = input("Method [1/2/3, default=1]: ").strip()
-        
-        if method_choice == '2':
-            sens_method = 'morris'
-        elif method_choice == '3':
-            sens_method = 'delta'
-        else:
-            sens_method = 'sobol'
-        
-        samples_input = input("Number of samples [default=512]: ").strip()
-        try:
-            n_samples = int(samples_input) if samples_input else 512
-        except ValueError:
-            n_samples = 512
-        
-        run_sensitivity_analysis(filepath, output_dir, method=sens_method, n_samples=n_samples, input_units=concentration_unit)
-    
-    # Step 11: Entropy-based HPI/PERI Analysis (Optional, Advanced)
-    print_step(11, TOTAL_STEPS, "Entropy HPI/PERI Analysis (optional, advanced)")
-    print("Entropy-weighted Heavy Metal Pollution Index (HPI) and")
-    print("Potential Ecological Risk Index (PERI) analysis.")
-    print("Requires standards.csv and toxicity.csv files.")
-    
-    # Use preset-based decision or prompt user
-    if run_advanced is True:
-        print("  [AUTO] Running entropy analysis (Publication mode)")
-        run_entropy_choice = 'y'
-    elif run_advanced is False:
-        print("  [SKIP] Skipping entropy analysis (Use Publication or Custom mode to enable)")
-        run_entropy_choice = 'n'
-    else:  # Custom mode
-        run_entropy_choice = input("Run entropy HPI/PERI analysis? [y/N]: ").strip().lower()
-    
-    if run_entropy_choice == 'y':
-        # Check for standards and toxicity files
-        standards_file = None
-        toxicities_file = None
-        
-        # Try to find in waterdata folder first, then project root
-        for base_dir in [WATERDATA_DIR, PROJECT_ROOT]:
-            std_path = os.path.join(base_dir, "standards.csv")
-            tox_path = os.path.join(base_dir, "toxicity.csv")
+        elif choice == '6':
+            if check_hbmpra_results(ctx):
+                run_plot_diagnostics(ctx.output_dir)
+                
+        elif choice == '7':
+            if check_hbmpra_results(ctx):
+                run_summary_tables(ctx.output_dir, ctx.input_file)
+                
+        elif choice == '8':
+            # Sensitivity Post-Analysis
+            sens_dir = os.path.join(ctx.output_dir, "sensitivity")
+            if os.path.exists(sens_dir):
+                print("  Re-generating sensitivity visualizations...")
+                # We can call the script with minimal samples just to trigger plotting if results exist
+                # but better to just re-run with current logic as sensitivity_analysis.py usually handles both
+                run_sensitivity_workflow(ctx)
+            else:
+                print("  [WARN] No sensitivity results found. Run calculation first (Option 2).")
+                
+        elif choice == '9':
+            # Indices Post-Analysis
+            ent_dir = os.path.join(ctx.output_dir, "entropy_analysis")
+            if os.path.exists(ent_dir):
+                print("  Updating Pollution Indices Visualizations & Tables...")
+                run_indices_workflow(ctx)
+            else:
+                print("  [WARN] No indices results found. Run calculation first (Option 3).")
+                
+        elif choice == '10':
+            ctx = configure_session(default_file=ctx.input_file)
+            if not ctx: break
             
-            if os.path.exists(std_path) and standards_file is None:
-                standards_file = std_path
-            if os.path.exists(tox_path) and toxicities_file is None:
-                toxicities_file = tox_path
-        
-        if standards_file and toxicities_file:
-            print(f"  Found standards: {standards_file}")
-            print(f"  Found toxicities: {toxicities_file}")
         else:
-            if not standards_file:
-                standards_file = input("  Path to standards.csv: ").strip()
-            if not toxicities_file:
-                toxicities_file = input("  Path to toxicity.csv: ").strip()
-        
-        bootstrap_input = input("Bootstrap samples [default=1000]: ").strip()
-        try:
-            bootstrap_samples = int(bootstrap_input) if bootstrap_input else 1000
-        except ValueError:
-            bootstrap_samples = 1000
-        
-        run_entropy_hpi_peri(filepath, output_dir, standards_file, toxicities_file, bootstrap_samples, input_units=concentration_unit)
-    else:
-        print("  [SKIP] Skipping entropy HPI/PERI analysis")
-    
-    # Note: Custom plot builder is now integrated into Steps 7-8
-    
-    # Summary
-    print("\n" + "="*70)
-    print("  ANALYSIS COMPLETE!")
-    print("="*70)
-    print(f"\nResults saved to: {output_dir}/")
-    print("\nKey output files:")
-    print(f"  • {output_dir}/trace.nc              - Full Bayesian model results")
-    print(f"  • {output_dir}/RUNLOG.json           - Analysis configuration")
-    print(f"  • {output_dir}/ASSUMPTIONS.json      - Model assumptions")
-    print(f"  • {output_dir}/debug/HI_summary.csv  - Hazard Index summary")
-    
-    if run_speciation:
-        print(f"  • {output_dir}/table_species_fractions.csv")
-        print(f"  • {output_dir}/table_bioavailable_concentrations.csv")
-    
-    print(f"\nDiagnostic plots:   {output_dir}/diagnostics/")
-    print(f"Result figures:     {output_dir}/figures/")
-    print(f"Summary tables:     {output_dir}/tables/")
-    
-    # Show advanced analysis output directories if they were run
-    if run_sens_choice == 'y':
-        print(f"Sensitivity analysis: {output_dir}/sensitivity/")
-    if run_entropy_choice == 'y':
-        print(f"Entropy HPI/PERI:   {output_dir}/entropy_analysis/")
-    
-    print("\nNext steps:")
-    print("  1. Review HI_summary.csv for hazard indices by organ system")
-    print("  2. Check figures/ for publication-ready plots")
-    print("  3. Check tables/ for summary statistics and PCA results")
-    if run_sens_choice == 'y':
-        print("  4. Check sensitivity/ for parameter influence analysis")
-    if run_entropy_choice == 'y':
-        print("  5. Check entropy_analysis/ for HPI/PERI pollution indices")
-    
+            print("  [WARN] Invalid choice. Please try again.")
+
     return 0
 
 
 def quick_mode(args):
-    """Run in quick mode with command-line arguments."""
+    """Run in quick mode for batch/automated processing (Original Logic)."""
     print_banner()
-    
-    # Validate input
     if not os.path.exists(args.input):
-        print(f"Error: Input file not found: {args.input}")
+        print(f"Error: Input file {args.input} not found.")
         return 1
     
     valid, info = validate_chemistry_file(args.input)
     if not valid:
         print(f"Error: {info}")
         return 1
-    
-    print(f"Input: {args.input}")
-    print(f"  - {info['rows']} samples, {len(info['metals'])} metals")
-    
-    # Set output directory
+        
+    # Set output directory - explicitly save in project root (outside src/)
     if args.output:
         output_dir = args.output
     else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir = f"results_{Path(args.input).stem}_{timestamp}"
     
+    # Force output to be in project root if relative path
+    if not os.path.isabs(output_dir):
+        output_dir = os.path.abspath(os.path.join(PROJECT_ROOT, output_dir))
+        
     os.makedirs(output_dir, exist_ok=True)
-    print(f"Output: {output_dir}/")
     
-    import subprocess
+    input_units = 'mg/L' if args.units in ['mg/L', 'ppm'] else 'µg/L'
     
-    # Determine concentration units
-    input_units = 'µg/L'  # default
-    if args.units in ['mg/L', 'ppm']:
-        input_units = 'mg/L'
-        print(f"Input units: {args.units} (will convert to µg/L internally)")
-    else:
-        print(f"Input units: {args.units}")
-    
-    # Run speciation if not skipped
+    # Standard sequential run
     if not args.skip_speciation:
-        print("\n[1/8] Running speciation modeling...")
-        speciation_cmd = [
-            sys.executable, os.path.join(SCRIPT_DIR, "speciation_modeling.py"),
-            "--input", args.input,
-            "--output-dir", output_dir,
-            "--use-total-fallback"
-        ]
-        if input_units == 'mg/L':
-            speciation_cmd.extend(["--input-units", "mg/L"])
-        result = subprocess.run(speciation_cmd)
-        if result.returncode != 0:
-            print("Warning: Speciation had issues, continuing...")
-    
-    # Run BLL calibration
-    print("\n[2/8] Calibrating BLL priors...")
+        run_spec_cmd = [sys.executable, os.path.join(SCRIPT_DIR, "speciation_modeling.py"),
+                       "--input", args.input, "--output-dir", output_dir, "--use-total-fallback"]
+        if input_units == 'mg/L': run_spec_cmd.extend(["--input-units", "mg/L"])
+        import subprocess
+        subprocess.run(run_spec_cmd)
+        
     run_bll_calibration(args.input, output_dir, input_units)
     
-    # Run HBMPRA
-    print("\n[3/8] Running Bayesian risk assessment...")
-    hbmpra_cmd = [
-        sys.executable, os.path.join(SCRIPT_DIR, "hbmpra_optimized.py"),
-        "--chemistry", args.input,
-        "--results-dir", output_dir,
-        "--draws", str(args.draws),
-        "--tune", str(args.tune),
-        "--use-bioavailable",
-        "--allow-default-organ-sets",
-        "--allow-disable-dermal-if-no-bio"
-    ]
-    if input_units == 'mg/L':
-        hbmpra_cmd.extend(["--input-units", "mg/L"])
+    hbmp_cmd = [sys.executable, os.path.join(SCRIPT_DIR, "hbmpra_optimized.py"),
+               "--chemistry", args.input, "--results-dir", output_dir,
+               "--draws", str(args.draws), "--tune", str(args.tune), "--use-bioavailable"]
+    if input_units == 'mg/L': hbmp_cmd.extend(["--input-units", "mg/L"])
+    import subprocess
+    subprocess.run(hbmp_cmd)
     
-    result = subprocess.run(hbmpra_cmd)
-    
-    if result.returncode != 0:
-        print(f"\n[WARN] Errors occurred in Bayesian analysis. Check output above.")
-        return result.returncode
-    
-    # Post-processing: Generate plots and tables
     if not args.skip_plots:
-        print("\n[4/8] Generating diagnostic plots...")
         run_plot_diagnostics(output_dir)
-        
-        print("\n[5/8] Generating result figures...")
         run_plot_results(output_dir)
-    
     if not args.skip_tables:
-        print("\n[6/8] Generating summary tables...")
         run_summary_tables(output_dir, args.input)
-    
-    # Advanced analyses (optional)
     if not args.skip_sensitivity:
-        print("\n[7/8] Running sensitivity analysis...")
         run_sensitivity_analysis(args.input, output_dir, method='sobol', n_samples=512, input_units=input_units)
-    else:
-        print("\n[7/8] Skipping sensitivity analysis (use --skip-sensitivity=False to include)")
-    
     if not args.skip_entropy:
-        print("\n[8/8] Running entropy HPI/PERI analysis...")
-        # Default to project root for standards and toxicity files
-        standards_file = os.path.join(PROJECT_ROOT, "standards.csv")
-        toxicities_file = os.path.join(PROJECT_ROOT, "toxicity.csv")
+        run_entropy_hpi_peri(args.input, output_dir, input_units=input_units)
         
-        # Also check waterdata folder
-        if not os.path.exists(standards_file):
-            standards_file = os.path.join(WATERDATA_DIR, "standards.csv")
-        if not os.path.exists(toxicities_file):
-            toxicities_file = os.path.join(WATERDATA_DIR, "toxicity.csv")
-        
-        run_entropy_hpi_peri(args.input, output_dir, standards_file, toxicities_file, input_units=input_units)
-    else:
-        print("\n[8/8] Skipping entropy HPI/PERI analysis (use --skip-entropy=False to include)")
-    
-    # Final summary
-    print("\n" + "="*70)
-    print("  ANALYSIS COMPLETE!")
-    print("="*70)
-    print(f"\nResults saved to: {output_dir}/")
-    print("\nKey output directories:")
-    print(f"  • {output_dir}/debug/        - HI_summary.csv")
-    print(f"  • {output_dir}/diagnostics/  - Convergence and trace plots")
-    print(f"  • {output_dir}/figures/      - Publication-ready figures")
-    print(f"  • {output_dir}/tables/       - Summary tables and statistics")
-    if not args.skip_sensitivity:
-        print(f"  • {output_dir}/sensitivity/  - Sensitivity analysis results")
-    if not args.skip_entropy:
-        print(f"  • {output_dir}/entropy_analysis/ - HPI/PERI pollution indices")
-    
     return 0
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="HBMPRA - User-Friendly Risk Assessment Runner",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python run_hbmpra.py                    # Interactive mode (recommended)
-  python run_hbmpra.py --input data1.csv  # Quick mode with all analyses
-  python run_hbmpra.py --input data1.csv --output results_myanalysis
-  python run_hbmpra.py --input data1.csv --skip-plots  # Skip figure generation
-  python run_hbmpra.py --input data1.csv --skip-sensitivity --skip-entropy  # Skip advanced analyses
-
-For beginners: Just run 'python run_hbmpra.py' and follow the prompts!
-        """
+        description="HBMPRA Interactive Analysis Hub",
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    
-    parser.add_argument("--input", "-i", 
-                        help="Input chemistry CSV file")
-    parser.add_argument("--output", "-o",
-                        help="Output directory (default: auto-generated)")
-    parser.add_argument("--skip-speciation", action="store_true",
-                       help="Skip PHREEQC speciation modeling")
-    parser.add_argument("--skip-plots", action="store_true",
-                       help="Skip generating diagnostic plots and result figures")
-    parser.add_argument("--skip-tables", action="store_true",
-                       help="Skip generating summary tables")
-    parser.add_argument("--skip-sensitivity", action="store_true",
-                       help="Skip sensitivity analysis (advanced)")
-    parser.add_argument("--skip-entropy", action="store_true",
-                       help="Skip entropy-based HPI/PERI analysis (advanced)")
-    parser.add_argument("--draws", type=int, default=1000,
-                        help="Number of MCMC draws (default: 1000, use 2000+ for publication)")
-    parser.add_argument("--tune", type=int, default=1000,
-                        help="Number of tuning samples (default: 1000)")
-    parser.add_argument("--units", choices=['ug/L', 'mg/L', 'ppb', 'ppm'], default='ug/L',
-                        help="Concentration units in input file (default: ug/L). Use mg/L or ppm if concentrations are in mg/L.")
-    parser.add_argument("--interactive", action="store_true",
-                        help="Force interactive mode")
+    parser.add_argument("--input", "-i", help="Input chemistry CSV file")
+    parser.add_argument("--output", "-o", help="Output directory")
+    parser.add_argument("--skip-speciation", action="store_true")
+    parser.add_argument("--skip-plots", action="store_true")
+    parser.add_argument("--skip-tables", action="store_true")
+    parser.add_argument("--skip-sensitivity", action="store_true")
+    parser.add_argument("--skip-entropy", action="store_true")
+    parser.add_argument("--draws", type=int, default=1000)
+    parser.add_argument("--tune", type=int, default=1000)
+    parser.add_argument("--units", choices=['ug/L', 'mg/L', 'ppb', 'ppm'], default='ug/L')
+    parser.add_argument("--interactive", action="store_true")
     
     args = parser.parse_args()
     
-    # Determine mode
     if args.interactive or (not args.input and len(sys.argv) == 1):
         return interactive_mode()
     elif args.input:
         return quick_mode(args)
     else:
         parser.print_help()
-        return 0
+    return 0
 
 
 if __name__ == "__main__":
