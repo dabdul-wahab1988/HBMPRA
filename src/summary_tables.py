@@ -381,7 +381,7 @@ def generate_t3_posterior_summary(idata, output_dir):
     return df_t3
 
 
-def generate_t4_risk_ranking(idata, output_dir, df_chem=None, top_n=10):
+def generate_t4_risk_ranking(idata, output_dir, df_chem=None, top_n=500):
     """T4: Top sites by overall hazard index."""
     post = idata.posterior
     
@@ -518,11 +518,11 @@ def generate_t4_risk_ranking(idata, output_dir, df_chem=None, top_n=10):
                     record['BLL_Median'] = bll_stats['median']
                     record['BLL_3%'] = bll_stats['p03']
                     record['BLL_97%'] = bll_stats['p97']
-                    thr = 3.5 if grp in ['Children', 'Pregnant'] else 5.0
-                    record['BLL_Threshold'] = thr
                     try:
                         sub = arr_bll.isel(site=i, group=j) if 'group' in arr_bll.dims else arr_bll.isel(site=i)
-                        record['P(BLL_Elevated)'] = (sub.values[np.isfinite(sub.values)] > thr).mean()
+                        vals = sub.values[np.isfinite(sub.values)]
+                        record['P(BLL>3.5)'] = (vals > 3.5).mean()
+                        record['P(BLL>5.0)'] = (vals > 5.0).mean()
                     except: pass
             
             if organ_hi_vars:
@@ -603,7 +603,8 @@ def generate_t5_bll_summary(idata, output_dir):
                 'BLL_Median': np.median(vals),
                 'BLL_3%': np.percentile(vals, 3),
                 'BLL_97%': np.percentile(vals, 97),
-                f'P(BLL>{thr})': (vals > thr).mean(),
+                'P(BLL>3.5)': (vals > 3.5).mean(),
+                'P(BLL>5.0)': (vals > 5.0).mean(),
                 'Reference_Threshold': thr,
             })
         except Exception:
@@ -808,8 +809,8 @@ Examples:
                         help="Original chemistry CSV input file (optional, auto-detected from RUNLOG)")
     parser.add_argument("--output-dir", "-o", default=None,
                         help="Output directory for tables (default: results-dir/tables)")
-    parser.add_argument("--top-n", type=int, default=10,
-                        help="Number of top sites to include in risk ranking (default: 10)")
+    parser.add_argument("--top-n", type=int, default=500,
+                        help="Number of top sites to include in risk ranking (default: 500)")
     
     args = parser.parse_args()
     
