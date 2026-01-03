@@ -20,7 +20,7 @@ import pandas as pd
 import arviz as az
 import matplotlib.pyplot as plt
 import seaborn as sns
-from matplotlib.ticker import LogLocator, LogFormatterMathtext, ScalarFormatter
+from matplotlib.ticker import LogLocator, LogFormatterMathtext, ScalarFormatter, MaxNLocator
 
 # Global variable to hold unit information loaded from ASSUMPTIONS.json
 _UNIT_INFO = {
@@ -394,9 +394,17 @@ def plot_core_posterior_2x2(idata, output_dir, bll_thresholds="3.5,5,10", cr_axi
                 ax.axvline(thr_k, color="red", linestyle="--", linewidth=1.2)
                 # Nice decade ticks
                 cur_lo, cur_hi = ax.get_xlim()
-                kmin = int(np.floor(cur_lo)); kmax = int(np.ceil(cur_hi))
-                ax.set_xticks(list(range(kmin, kmax + 1)))
-                ax.set_xticklabels([rf"$10^{{{t}}}$" for t in range(kmin, kmax + 1)])
+                # Limit Pb BLL x-axis ticks to ~5 for readability on log10 scale
+                if var == "BLL":
+                    locator = MaxNLocator(nbins=5)
+                    tick_pos = locator.tick_values(cur_lo, cur_hi)
+                    tick_pos = [t for t in tick_pos if cur_lo <= t <= cur_hi]
+                    ax.set_xticks(tick_pos)
+                    ax.set_xticklabels([rf"$10^{{{t:.2g}}}$" for t in tick_pos])
+                else:
+                    kmin = int(np.floor(cur_lo)); kmax = int(np.ceil(cur_hi))
+                    ax.set_xticks(list(range(kmin, kmax + 1)))
+                    ax.set_xticklabels([rf"$10^{{{t}}}$" for t in range(kmin, kmax + 1)])
             except Exception:
                 pass
             ax.set_xlabel(lbl, fontsize=12); ax.set_ylabel("Density (log10 space)", fontsize=12)
