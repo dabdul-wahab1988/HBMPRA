@@ -1,0 +1,14 @@
+analyte,source,notes
+Hg,Håkanson 1980,"T_i = 40; used in classic Håkanson PERI formulation"
+Cd,Håkanson 1980,"T_i = 30"
+As,Håkanson 1980,"T_i = 10"
+Pb,Håkanson 1980,"T_i = 5"
+Cu,Håkanson 1980,"T_i = 5"
+Cr,Håkanson 1980,"T_i = 2"
+Zn,Håkanson 1980,"T_i = 1"
+Ni,Håkanson 1980,"T_i = 5"
+Mn,Håkanson 1980,"T_i = 1"
+
+# Notes: These provenance rows were provided by the user and saved separately from the machine-readable toxicity.csv for traceability.
+Co,Håkanson 1980,"T_i = 1"
+Fe,Håkanson 1980,"T_i = 1"

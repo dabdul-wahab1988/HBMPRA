@@ -1,0 +1,332 @@
+organ_sets:
+  neuro: [Mn, Tl, Pb] # Added Tl (thallium)
+  nephro: [Cd, Hg, CrVI, U] # Added U (uranium)
+  hepato: [As, Cd, Cu, CrVI, Se] # Added Se (hepatotoxic at high doses)
+  cardiovascular: [As, Co, Pb, Ba] # Added Ba (barium)
+  endocrine: [As, Co]
+  hemato: [Pb, Zn, nitrate, nitrite, Sb] # Added nitrite, Sb
+  derm: [As, CrVI, Ni, Pb, Co, Ag] # Added Ag (argyria)
+  gi: [CrVI, CrIII, Cu, Fe, Be] # Added Be
+  skeletal_dental: [fluoride]
+  systemic: [Mo, Se, V] # Added Mo, Se
+
+tox:
+  As:
+    RfD_oral: 3.0e-4
+    SF_oral: 1.5
+    ABS_GI: 0.95
+    RfD_derm: 1.23e-4
+    SF_derm: 3.66
+    target_organs:
+      - hepato: ingestion
+      - systemic: ingestion
+      - endocrine: ingestion
+      - cardiovascular: ingestion
+      - derm: dermal
+  Cd:
+    RfD_oral: 5.0e-4
+    SF_oral: 0.0
+    ABS_GI: 0.075
+    # Provenance: RfD_oral from toxref; ABS_GI from literature estimate
+    # Dermal RfD derived offline as RfD_derm = RfD_oral * ABS_GI
+    RfD_derm: 3.75e-5 # = 5.0e-4 * 0.075
+    target_organs:
+      - nephro: ingestion
+  CrVI:
+    RfD_oral: 3.0e-3
+    SF_oral: 0.5
+    ABS_GI: 0.025
+    RfD_derm: 6.0e-5
+    SF_derm: 41.0
+    target_organs:
+      - nephro: ingestion
+      - gi: ingestion
+      - hepato: ingestion
+      - derm: dermal
+  CrIII:
+    RfD_oral: 1.5
+    SF_oral: 0.0
+    ABS_GI: 0.015
+    # Dermal RfD derived offline: RfD_oral * ABS_GI
+    RfD_derm: 2.25e-2 # = 1.5 * 0.015
+    target_organs:
+      - gi: ingestion
+  Cr:
+    RfD_oral: 0.003
+    SF_oral: 0.0
+    ABS_GI: 0.015
+    # Conservative dermal RfD derived from CrVI-like assumption
+    RfD_derm: 4.5e-5 # = 3.0e-3 * 0.015
+    target_organs: []
+  Ni:
+    RfD_oral: 2.0e-2
+    SF_oral: 0.0
+    ABS_GI: 0.14
+    RfD_derm: 2.0e-2
+    SF_derm: 0.0
+    target_organs:
+      - derm: dermal
+      - systemic: ingestion
+  Mn:
+    RfD_oral: 1.4e-1
+    SF_oral: 0.0
+    ABS_GI: 0.055
+    # Dermal RfD derived offline: RfD_oral * ABS_GI
+    RfD_derm: 7.7e-3 # = 1.4e-1 * 0.055
+    target_organs:
+      - neuro: ingestion
+  Cu:
+    RfD_oral: 0.04
+    SF_oral: 0.0
+    ABS_GI: 0.40
+    # Dermal RfD derived offline: RfD_oral * ABS_GI
+    RfD_derm: 1.6e-2 # = 4.0e-2 * 0.40
+    target_organs:
+      - gi: ingestion
+      - hepato: ingestion
+  Pb:
+    RfD_oral: 3.5e-3
+    SF_oral: 0.0
+    ABS_GI: 0.10
+    RfD_derm: 5.25e-4
+    SF_derm: 0.0
+    target_organs:
+      - neuro: ingestion
+      - nephro: ingestion
+      - cardiovascular: ingestion
+      - hemato: ingestion
+      - derm: dermal
+  Hg:
+    RfD_oral: 3.0e-4
+    SF_oral: 0.0
+    ABS_GI: 0.11
+    # Dermal RfD derived offline: RfD_oral * ABS_GI
+    RfD_derm: 3.3e-5 # = 3.0e-4 * 0.11
+    target_organs:
+      - nephro: ingestion
+      - neuro: ingestion
+  Hg(0):
+    RfD_oral: 0.0
+    SF_oral: 0.0
+    ABS_GI: 0.005
+    # Hg(0) has negligible oral absorption; set dermal RfD to zero (derived)
+    RfD_derm: 0.0
+    target_organs: []
+  Hg(I):
+    RfD_oral: 3.0e-4
+    SF_oral: 0.0
+    ABS_GI: 0.11
+    RfD_derm: 3.3e-5
+    target_organs:
+      - nephro: ingestion
+      - neuro: ingestion
+  Hg(II):
+    RfD_oral: 3.0e-4
+    SF_oral: 0.0
+    ABS_GI: 0.11
+    RfD_derm: 3.3e-5
+    target_organs:
+      - nephro: ingestion
+      - neuro: ingestion
+  Co:
+    RfD_oral: 3.0e-4
+    SF_oral: 0.0
+    RfD_derm: 1.6e-3
+    SF_derm: 0.0
+    ABS_GI: 0.05
+    target_organs:
+      - cardiovascular: ingestion
+      - endocrine: ingestion
+      - derm: dermal
+  Al:
+    RfD_oral: 1.0
+    SF_oral: 0.0
+    ABS_GI: 0.001
+    RfD_derm: 0.001
+    SF_derm: 0.0
+    target_organs:
+      - neuro: ingestion
+  V:
+    RfD_oral: 0.009
+    SF_oral: 0.0
+    ABS_GI: 0.026
+    RfD_derm: 0.000234
+    SF_derm: 0.0
+    target_organs:
+      - systemic: ingestion
+  Fe:
+    RfD_oral: 0.7
+    SF_oral: 0.0
+    ABS_GI: 0.02
+    # Dermal RfD derived offline: RfD_oral * ABS_GI
+    RfD_derm: 1.4e-2 # = 0.7 * 0.02
+    target_organs:
+      - gi: ingestion
+      - hepato: ingestion
+  Zn:
+    RfD_oral: 0.3
+    SF_oral: 0.0
+    ABS_GI: 0.25
+    # Dermal RfD derived offline: RfD_oral * ABS_GI
+    RfD_derm: 7.5e-2 # = 3.0e-1 * 0.25
+    target_organs:
+      - systemic: ingestion
+      - hemato: ingestion
+
+  # =================================
+  # NEW METALS (Added Dec 2024)
+  # =================================
+  Sb:
+    # Antimony - common in mining areas
+    # RfD from IRIS: 0.0004 mg/kg-day (hematological effects)
+    RfD_oral: 0.0004
+    SF_oral: 0.0
+    ABS_GI: 0.10
+    RfD_derm: 4.0e-5 # Derived: RfD_oral * ABS_GI
+    SF_derm: 0.0
+    target_organs:
+      - hemato: ingestion
+      - cardiovascular: ingestion
+
+  Ba:
+    # Barium - naturally occurring in groundwater
+    # RfD from IRIS: 0.2 mg/kg-day (cardiovascular effects - hypertension)
+    RfD_oral: 0.2
+    SF_oral: 0.0
+    ABS_GI: 0.07
+    RfD_derm: 1.4e-2 # Derived: RfD_oral * ABS_GI
+    SF_derm: 0.0
+    target_organs:
+      - cardiovascular: ingestion
+      - nephro: ingestion
+
+  Be:
+    # Beryllium - industrial contamination
+    # RfD from IRIS: 0.002 mg/kg-day (GI effects)
+    # SF_oral from IRIS: 4.3 (based on inhalation extrapolation, B1 carcinogen)
+    RfD_oral: 0.002
+    SF_oral: 4.3
+    ABS_GI: 0.01
+    RfD_derm: 2.0e-5 # Derived
+    SF_derm: 0.0
+    target_organs:
+      - gi: ingestion
+      - systemic: ingestion
+
+  Mo:
+    # Molybdenum - mining areas, naturally occurring
+    # RfD from IRIS: 0.005 mg/kg-day (systemic effects)
+    RfD_oral: 0.005
+    SF_oral: 0.0
+    ABS_GI: 0.35
+    RfD_derm: 1.75e-3 # Derived
+    SF_derm: 0.0
+    target_organs:
+      - systemic: ingestion
+
+  Se:
+    # Selenium - agricultural areas, natural
+    # RfD from IRIS: 0.005 mg/kg-day (selenosis - dermal, hepatic)
+    RfD_oral: 0.005
+    SF_oral: 0.0
+    ABS_GI: 0.80
+    RfD_derm: 4.0e-3 # Derived
+    SF_derm: 0.0
+    target_organs:
+      - systemic: ingestion
+      - hepato: ingestion
+      - derm: ingestion
+
+  Ag:
+    # Silver - mining, natural
+    # RfD from IRIS: 0.005 mg/kg-day (argyria - skin discoloration)
+    RfD_oral: 0.005
+    SF_oral: 0.0
+    ABS_GI: 0.04
+    RfD_derm: 2.0e-4 # Derived
+    SF_derm: 0.0
+    target_organs:
+      - derm: ingestion
+
+  Tl:
+    # Thallium - industrial, mining
+    # RfD from IRIS: 0.00001 mg/kg-day (very toxic - neurological)
+    RfD_oral: 0.00001
+    SF_oral: 0.0
+    ABS_GI: 0.90
+    RfD_derm: 9.0e-6 # Derived
+    SF_derm: 0.0
+    target_organs:
+      - neuro: ingestion
+      - systemic: ingestion
+
+  U:
+    # Uranium (natural) - natural, mining areas
+    # RfD from IRIS: 0.0006 mg/kg-day (nephrotoxicity - chemical toxicity)
+    # Note: This is chemical RfD, not radiological
+    RfD_oral: 0.0006
+    SF_oral: 0.0
+    ABS_GI: 0.02
+    RfD_derm: 1.2e-5 # Derived
+    SF_derm: 0.0
+    target_organs:
+      - nephro: ingestion
+
+  # =================================
+  # ANIONS (Fluoride, Nitrate, Nitrite)
+  # =================================
+  fluoride:
+    # RfD from IRIS: 0.06 mg/kg-day for soluble fluoride (skeletal fluorosis endpoint)
+    # Source: https://www.ncbi.nlm.nih.gov/books/NBK225040/
+    RfD_oral: 0.06
+    rfd_basis: "F"
+    SF_oral: 0.0 # Non-carcinogenic
+    ABS_GI: 1.0 # Complete GI absorption assumed
+    # Dermal exposure not significant for fluoride in drinking water
+    RfD_derm: null
+    SF_derm: 0.0
+    routes_enabled:
+      ingestion: true
+      dermal: false
+    target_organs:
+      - skeletal_dental: ingestion
+    mixture_group: anions
+    guideline_who_mgL: 1.5 # WHO drinking water guideline
+
+  nitrate:
+    # RfD from ATSDR: 1.6 mg/kg-day as NO3-N (methemoglobinemia endpoint)
+    # Source: https://www.atsdr.cdc.gov/toxprofiles/tp204.pdf
+    # Note: 1.6 mg NO3-N/kg-day ≈ 7 mg NO3/kg-day
+    RfD_oral: 1.6
+    rfd_basis: "NO3-N" # RfD is expressed as nitrate-nitrogen
+    SF_oral: 0.0 # Non-carcinogenic
+    ABS_GI: 1.0 # Complete GI absorption assumed
+    # Dermal exposure not significant for nitrate in drinking water
+    RfD_derm: null
+    SF_derm: 0.0
+    routes_enabled:
+      ingestion: true
+      dermal: false
+    target_organs:
+      - hemato: ingestion
+    mixture_group: anions
+    guideline_who_mgL_NO3: 50 # WHO guideline as NO3
+    guideline_who_mgL_NO3N: 10 # WHO guideline as NO3-N
+
+  nitrite:
+    # RfD from ATSDR: 0.1 mg/kg-day as NO2 (methemoglobinemia - more potent than nitrate)
+    # Source: https://www.atsdr.cdc.gov/toxprofiles/tp204.pdf
+    RfD_oral: 0.1
+    rfd_basis: "NO2"
+    SF_oral: 0.0
+    ABS_GI: 1.0
+    RfD_derm: null
+    SF_derm: 0.0
+    routes_enabled:
+      ingestion: true
+      dermal: false
+    target_organs:
+      - hemato: ingestion
+    mixture_group: anions
+    guideline_who_mgL: 3.0 # WHO guideline as NO2
+

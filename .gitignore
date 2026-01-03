@@ -1,0 +1,13 @@
+# Ignore temporary directories & generated files
+pymc_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.claude/
+
+# Windows special files
+nul
+
+# Environment
+.venv/
