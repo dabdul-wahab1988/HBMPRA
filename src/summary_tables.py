@@ -503,6 +503,7 @@ def generate_t4_risk_ranking(idata, output_dir, df_chem=None, top_n=10):
                 cr_stats = get_stats(arr_cr, i, j)
                 if cr_stats:
                     record['CR_Mean'] = cr_stats['mean']
+                    record['CR_Median'] = cr_stats['median']
                     record['CR_3%'] = cr_stats['p03']
                     record['CR_97%'] = cr_stats['p97']
                     try:
@@ -514,12 +515,14 @@ def generate_t4_risk_ranking(idata, output_dir, df_chem=None, top_n=10):
                 bll_stats = get_stats(arr_bll, i, j)
                 if bll_stats:
                     record['BLL_Mean'] = bll_stats['mean']
+                    record['BLL_Median'] = bll_stats['median']
                     record['BLL_3%'] = bll_stats['p03']
                     record['BLL_97%'] = bll_stats['p97']
                     thr = 3.5 if grp in ['Children', 'Pregnant'] else 5.0
+                    record['BLL_Threshold'] = thr
                     try:
                         sub = arr_bll.isel(site=i, group=j) if 'group' in arr_bll.dims else arr_bll.isel(site=i)
-                        record[f'P(BLL>{thr})'] = (sub.values[np.isfinite(sub.values)] > thr).mean()
+                        record['P(BLL_Elevated)'] = (sub.values[np.isfinite(sub.values)] > thr).mean()
                     except: pass
             
             if organ_hi_vars:
