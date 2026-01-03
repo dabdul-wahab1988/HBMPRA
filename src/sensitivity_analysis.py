@@ -647,33 +647,36 @@ def perform_sensitivity_analysis(
 
         # Analyze HI
         Si_HI = sobol.analyze(problem, Y_HI, calc_second_order=True, print_to_console=False)
+        # Clip negative values to zero (numerical artifact from Monte Carlo estimation)
         results['HI'] = {
-            'S1': Si_HI['S1'],
-            'ST': Si_HI['ST'],
+            'S1': np.clip(Si_HI['S1'], 0, None),
+            'ST': np.clip(Si_HI['ST'], 0, None),
             'S1_conf': Si_HI['S1_conf'],
             'ST_conf': Si_HI['ST_conf'],
-            'S2': Si_HI['S2'] if 'S2' in Si_HI else None
+            'S2': np.clip(Si_HI['S2'], 0, None) if 'S2' in Si_HI and Si_HI['S2'] is not None else None
         }
 
         # Analyze CR
         Si_CR = sobol.analyze(problem, Y_CR, calc_second_order=True, print_to_console=False)
+        # Clip negative values to zero (numerical artifact from Monte Carlo estimation)
         results['CR'] = {
-            'S1': Si_CR['S1'],
-            'ST': Si_CR['ST'],
+            'S1': np.clip(Si_CR['S1'], 0, None),
+            'ST': np.clip(Si_CR['ST'], 0, None),
             'S1_conf': Si_CR['S1_conf'],
             'ST_conf': Si_CR['ST_conf'],
-            'S2': Si_CR['S2'] if 'S2' in Si_CR else None
+            'S2': np.clip(Si_CR['S2'], 0, None) if 'S2' in Si_CR and Si_CR['S2'] is not None else None
         }
 
         # Analyze BLL if available
         if np.any(Y_BLL > 0):
             Si_BLL = sobol.analyze(problem, Y_BLL, calc_second_order=True, print_to_console=False)
+            # Clip negative values to zero (numerical artifact from Monte Carlo estimation)
             results['BLL'] = {
-                'S1': Si_BLL['S1'],
-                'ST': Si_BLL['ST'],
+                'S1': np.clip(Si_BLL['S1'], 0, None),
+                'ST': np.clip(Si_BLL['ST'], 0, None),
                 'S1_conf': Si_BLL['S1_conf'],
                 'ST_conf': Si_BLL['ST_conf'],
-                'S2': Si_BLL['S2'] if 'S2' in Si_BLL else None
+                'S2': np.clip(Si_BLL['S2'], 0, None) if 'S2' in Si_BLL and Si_BLL['S2'] is not None else None
             }
 
         results['samples'] = X
